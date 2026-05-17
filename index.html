@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>MI-AR-TE</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -29,12 +30,29 @@
       border-radius: 999px;
       font-size: 14px;
       z-index: 9999;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    #startBtn {
+      position: fixed;
+      left: 50%;
+      top: 20px;
+      transform: translateX(-50%);
+      z-index: 9999;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 999px;
+      background: #111;
+      color: #fff;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
-  <div id="label">Apunta a la obra</div>
+  <button id="startBtn">Activar video</button>
+  <div id="label">Activa el video y apunta a la obra</div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
@@ -61,51 +79,93 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <a-plane
-        id="video-plane"
+      <a-video
+        id="videoEntity"
+        src="#ar-video"
         position="0 0 0.01"
         width="1"
         height="1"
-        material="src: #ar-video; shader: flat; side: double; transparent: true"
         visible="false"
-      ></a-plane>
+      ></a-video>
     </a-entity>
   </a-scene>
 
   <script>
     const label = document.getElementById('label');
+    const startBtn = document.getElementById('startBtn');
     const video = document.getElementById('ar-video');
     const target = document.getElementById('target');
-    const plane = document.getElementById('video-plane');
+    const videoEntity = document.getElementById('videoEntity');
 
-    async function tryPlayVideo() {
+    let unlocked = false;
+    let targetVisible = false;
+    let videoReady = false;
+
+    video.addEventListener('loadeddata', () => {
+      videoReady = true;
+      label.textContent = 'Video cargado. Apunta a la obra';
+    });
+
+    video.addEventListener('canplay', () => {
+      videoReady = true;
+      label.textContent = 'Video listo. Apunta a la obra';
+    });
+
+    video.addEventListener('error', () => {
+      label.textContent = 'Error cargando video';
+    });
+
+    async function unlockVideo() {
       try {
-        video.currentTime = 0;
         await video.play();
-        plane.setAttribute('visible', true);
-        label.textContent = 'Video reproduciendo';
+        video.pause();
+        video.currentTime = 0;
+        unlocked = true;
+        label.textContent = 'Video activado. Apunta a la obra';
+        startBtn.style.display = 'none';
       } catch (e) {
-        plane.setAttribute('visible', false);
-        label.textContent = 'Detectó la obra pero el video no reprodujo';
-        console.log('Error al reproducir video:', e);
+        label.textContent = 'No se pudo activar el video';
+        console.log(e);
       }
     }
 
+    async function showVideoIfPossible() {
+      if (!unlocked) {
+        label.textContent = 'Primero pulsa Activar video';
+        return;
+      }
+
+      if (!targetVisible) {
+        label.textContent = 'Apunta a la obra';
+        return;
+      }
+
+      try {
+        await video.play();
+        videoEntity.setAttribute('visible', true);
+        label.textContent = 'Video reproduciendo';
+      } catch (e) {
+        videoEntity.setAttribute('visible', false);
+        label.textContent = 'Detectó la obra pero no reprodujo';
+        console.log(e);
+      }
+    }
+
+    startBtn.addEventListener('click', async () => {
+      await unlockVideo();
+    });
+
     target.addEventListener('targetFound', async () => {
-      label.textContent = 'Obra detectada';
-      await tryPlayVideo();
+      targetVisible = true;
+      label.textContent = videoReady ? 'Obra detectada' : 'Obra detectada, cargando video';
+      await showVideoIfPossible();
     });
 
     target.addEventListener('targetLost', () => {
-      label.textContent = 'Apunta a la obra';
+      targetVisible = false;
       video.pause();
-      plane.setAttribute('visible', false);
-    });
-
-    window.addEventListener('click', async () => {
-      if (video.paused) {
-        await tryPlayVideo();
-      }
+      videoEntity.setAttribute('visible', false);
+      label.textContent = 'Objetivo perdido. Apunta otra vez';
     });
   </script>
 
