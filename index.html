@@ -18,7 +18,6 @@
       background: transparent;
       font-family: Arial, sans-serif;
     }
-
     #label {
       position: fixed;
       left: 50%;
@@ -33,7 +32,6 @@
       max-width: 90vw;
       text-align: center;
     }
-
     #startBtn {
       position: fixed;
       left: 50%;
@@ -52,7 +50,7 @@
 <body>
 
   <button id="startBtn">Activar video</button>
-  <div id="label">Activa el video y apunta a la obra</div>
+  <div id="label">Pulsa activar video y apunta a la obra</div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
@@ -98,22 +96,7 @@
     const videoEntity = document.getElementById('videoEntity');
 
     let unlocked = false;
-    let targetVisible = false;
-    let videoReady = false;
-
-    video.addEventListener('loadeddata', () => {
-      videoReady = true;
-      label.textContent = 'Video cargado. Apunta a la obra';
-    });
-
-    video.addEventListener('canplay', () => {
-      videoReady = true;
-      label.textContent = 'Video listo. Apunta a la obra';
-    });
-
-    video.addEventListener('error', () => {
-      label.textContent = 'Error cargando video';
-    });
+    let targetFound = false;
 
     async function unlockVideo() {
       try {
@@ -121,28 +104,24 @@
         video.pause();
         video.currentTime = 0;
         unlocked = true;
-        label.textContent = 'Video activado. Apunta a la obra';
         startBtn.style.display = 'none';
+        label.textContent = 'Video activado. Ahora apunta a la obra';
       } catch (e) {
         label.textContent = 'No se pudo activar el video';
         console.log(e);
       }
     }
 
-    async function showVideoIfPossible() {
+    async function playOnTarget() {
       if (!unlocked) {
         label.textContent = 'Primero pulsa Activar video';
         return;
       }
-
-      if (!targetVisible) {
-        label.textContent = 'Apunta a la obra';
-        return;
-      }
+      if (!targetFound) return;
 
       try {
-        await video.play();
         videoEntity.setAttribute('visible', true);
+        await video.play();
         label.textContent = 'Video reproduciendo';
       } catch (e) {
         videoEntity.setAttribute('visible', false);
@@ -151,21 +130,27 @@
       }
     }
 
-    startBtn.addEventListener('click', async () => {
-      await unlockVideo();
-    });
+    startBtn.addEventListener('click', unlockVideo);
 
     target.addEventListener('targetFound', async () => {
-      targetVisible = true;
-      label.textContent = videoReady ? 'Obra detectada' : 'Obra detectada, cargando video';
-      await showVideoIfPossible();
+      targetFound = true;
+      label.textContent = 'Obra detectada';
+      await playOnTarget();
     });
 
     target.addEventListener('targetLost', () => {
-      targetVisible = false;
+      targetFound = false;
       video.pause();
       videoEntity.setAttribute('visible', false);
-      label.textContent = 'Objetivo perdido. Apunta otra vez';
+      label.textContent = 'Apunta otra vez a la obra';
+    });
+
+    video.addEventListener('loadeddata', () => {
+      if (!unlocked) label.textContent = 'Video cargado. Pulsa Activar video';
+    });
+
+    video.addEventListener('error', () => {
+      label.textContent = 'Error cargando el video';
     });
   </script>
 
