@@ -11,78 +11,32 @@
   <style>
     html, body {
       margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
       background: #000;
       font-family: Arial, sans-serif;
     }
-
-    #ui {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 24px;
-      background: rgba(0, 0, 0, 0.75);
-      z-index: 9999;
-      color: #fff;
-      text-align: center;
-    }
-
-    #ui h1 {
-      margin: 0 0 12px 0;
-      font-size: 28px;
-    }
-
-    #ui p {
-      margin: 0 0 20px 0;
-      max-width: 320px;
-      line-height: 1.5;
-      color: rgba(255,255,255,0.85);
-    }
-
-    #unlockButton {
-      background: #fff;
-      color: #000;
-      border: none;
-      border-radius: 999px;
-      padding: 14px 22px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    #status {
+    #label {
       position: fixed;
       left: 50%;
       bottom: 20px;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.72);
-      color: white;
+      background: rgba(0,0,0,.7);
+      color: #fff;
       padding: 10px 16px;
       border-radius: 999px;
       font-size: 14px;
-      z-index: 9998;
+      z-index: 9999;
     }
   </style>
 </head>
 <body>
 
-  <div id="ui">
-    <h1>MI-AR-TE</h1>
-    <p>Primero toca el botón para activar video y cámara. Después apunta a la obra.</p>
-    <button id="unlockButton">Activar experiencia</button>
-  </div>
-
-  <div id="status">Esperando activación</div>
+  <div id="label">Apunta a la obra</div>
 
   <a-scene
-    embedded
-    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false; uiScanning: no; uiLoading: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind;"
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
@@ -105,7 +59,6 @@
 
     <a-entity id="target" mindar-image-target="targetIndex: 0">
       <a-video
-        id="videoPlane"
         src="#ar-video"
         position="0 0 0.01"
         width="1"
@@ -115,69 +68,24 @@
   </a-scene>
 
   <script>
-    const unlockButton = document.getElementById("unlockButton");
-    const ui = document.getElementById("ui");
-    const status = document.getElementById("status");
-    const scene = document.querySelector("a-scene");
-    const video = document.getElementById("ar-video");
-    const target = document.getElementById("target");
+    const label = document.getElementById('label');
+    const video = document.getElementById('ar-video');
+    const target = document.getElementById('target');
 
-    let unlocked = false;
-
-    unlockButton.addEventListener("click", async () => {
-      status.textContent = "Activando video y cámara...";
-
-      try {
-        video.muted = true;
-        video.currentTime = 0;
-        await video.play();
-        video.pause();
-        video.currentTime = 0;
-        unlocked = true;
-      } catch (e) {
-        status.textContent = "El video no se pudo desbloquear";
-        console.log("unlock error:", e);
-        return;
-      }
-
-      const startAR = () => {
-        const arSystem = scene.systems["mindar-image-system"];
-        if (arSystem) {
-          arSystem.start();
-          status.textContent = "Apunta a la obra";
-          ui.style.display = "none";
-        } else {
-          status.textContent = "No se encontró el sistema AR";
-        }
-      };
-
-      if (scene.hasLoaded) {
-        startAR();
-      } else {
-        scene.addEventListener("loaded", startAR, { once: true });
-      }
-    });
-
-    target.addEventListener("targetFound", async () => {
-      status.textContent = "Obra detectada";
-      if (!unlocked) {
-        status.textContent = "Video no desbloqueado";
-        return;
-      }
-
+    target.addEventListener('targetFound', async () => {
+      label.textContent = 'Obra detectada';
       try {
         video.currentTime = 0;
         await video.play();
-        status.textContent = "Reproduciendo video";
       } catch (e) {
-        status.textContent = "Detectó la obra, pero no pudo reproducir el video";
-        console.log("play error:", e);
+        label.textContent = 'Detectó la obra pero no reprodujo el video';
+        console.log(e);
       }
     });
 
-    target.addEventListener("targetLost", () => {
+    target.addEventListener('targetLost', () => {
+      label.textContent = 'Apunta a la obra';
       video.pause();
-      status.textContent = "Apunta a la obra";
     });
   </script>
 
