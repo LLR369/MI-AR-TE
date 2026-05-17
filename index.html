@@ -18,14 +18,12 @@
       background: transparent;
       font-family: Arial, sans-serif;
     }
-
     #ui {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 9999;
     }
-
     #label {
       position: fixed;
       left: 50%;
@@ -39,7 +37,6 @@
       text-align: center;
       max-width: 90vw;
     }
-
     #playBtn {
       position: fixed;
       left: 50%;
@@ -55,10 +52,6 @@
       pointer-events: auto;
       display: none;
       box-shadow: 0 10px 30px rgba(0,0,0,.28);
-    }
-
-    #playBtn:active {
-      transform: translate(-50%, -50%) scale(0.98);
     }
   </style>
 </head>
@@ -81,7 +74,7 @@
     <a-assets>
       <video
         id="ar-video"
-        src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm"
+        src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4"
         preload="auto"
         playsinline
         webkit-playsinline
@@ -126,21 +119,16 @@
       }
     }
 
-    async function loadMeta() {
+    function loadMeta() {
       return new Promise((resolve) => {
         const done = () => {
-          if (video.videoWidth && video.videoHeight) {
-            aspect = video.videoWidth / video.videoHeight;
-          }
+          if (video.videoWidth && video.videoHeight) aspect = video.videoWidth / video.videoHeight;
           setPlaneAspect();
           ready = true;
           resolve();
         };
-        if (video.readyState >= 1) {
-          done();
-        } else {
-          video.addEventListener('loadedmetadata', done, { once: true });
-        }
+        if (video.readyState >= 1) done();
+        else video.addEventListener('loadedmetadata', done, { once: true });
       });
     }
 
@@ -151,7 +139,6 @@
         video.pause();
         video.currentTime = 0;
         userUnlocked = true;
-        playBtn.textContent = 'Reproducir video';
         playBtn.style.display = 'block';
         label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video listo. Escanea la obra';
       } catch (e) {
@@ -184,11 +171,8 @@
     }
 
     playBtn.addEventListener('click', async () => {
-      if (video.paused) {
-        await startVideo();
-      } else {
-        stopVideo();
-      }
+      if (video.paused) await startVideo();
+      else stopVideo();
     });
 
     target.addEventListener('targetFound', () => {
@@ -201,15 +185,7 @@
     target.addEventListener('targetLost', () => {
       targetDetected = false;
       stopVideo();
-      if (userUnlocked) {
-        label.textContent = 'Apunta otra vez a la obra';
-      } else {
-        label.textContent = 'Escanea la obra';
-      }
-    });
-
-    video.addEventListener('error', () => {
-      label.textContent = 'Error cargando el archivo de video';
+      label.textContent = userUnlocked ? 'Apunta otra vez a la obra' : 'Escanea la obra';
     });
 
     loadMeta();
