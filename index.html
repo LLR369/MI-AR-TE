@@ -1,67 +1,36 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>MI-AR-TE</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <title>MI-AR-TE - Video AR</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: transparent;
-      font-family: Arial, sans-serif;
-    }
-    #ui {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 9999;
-    }
-    #label {
-      position: fixed;
-      left: 50%;
-      bottom: 20px;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,.72);
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 999px;
-      font-size: 14px;
-      text-align: center;
-      max-width: 90vw;
-    }
-    #playBtn {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      background: #111;
-      color: #fff;
-      border: 0;
-      border-radius: 999px;
-      padding: 16px 22px;
-      font-size: 16px;
-      font-weight: 700;
-      pointer-events: auto;
-      display: none;
-      box-shadow: 0 10px 30px rgba(0,0,0,.28);
-    }
+    html,body { margin:0; height:100%; background:transparent; font-family:Arial,Helvetica,sans-serif; }
+    #label { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(0,0,0,.72); color:#fff; padding:10px 16px; border-radius:999px; font-size:14px; z-index:9999; max-width:90vw; text-align:center; }
+    #playBtn { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#111; color:#fff; border:0; border-radius:999px; padding:14px 20px; font-size:16px; font-weight:700; z-index:10000; display:none; }
+    #videoOverlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:10001; }
+    #videoBox { position:relative; width:min(92vw,900px); max-height:85vh; }
+    #overlayVideo { width:100%; max-height:85vh; display:block; background:#000; border-radius:16px; }
+    #closeBtn { position:absolute; top:-14px; right:-14px; width:40px; height:40px; border:0; border-radius:999px; background:#111; color:#fff; font-size:20px; z-index:2; }
   </style>
 </head>
 <body>
 
-  <div id="ui">
-    <button id="playBtn">Reproducir video</button>
-    <div id="label">Escanea la obra</div>
+  <div id="label">Escanea la obra</div>
+  <button id="playBtn">Ver video</button>
+
+  <div id="videoOverlay">
+    <div id="videoBox">
+      <button id="closeBtn">×</button>
+      <video id="overlayVideo" playsinline webkit-playsinline controls preload="metadata"></video>
+    </div>
   </div>
 
+  <!-- A-Frame scene con MindAR -->
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
     color-space="sRGB"
@@ -71,124 +40,128 @@
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
   >
+    <!-- assets: el video se carga aquí como textura -->
     <a-assets>
-      <video
-        id="ar-video"
-        src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4"
-        preload="auto"
-        playsinline
-        webkit-playsinline
-        muted
-        loop
-        crossorigin="anonymous"
-      ></video>
+      <!-- IMPORTANTE: la URL del video debe permitir CORS (Access-Control-Allow-Origin: *) -->
+      <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop muted></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+    <!-- Entidad objetivo: el contenido se coloca dentro para que siga el target -->
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <a-video
-        id="videoEntity"
-        src="#ar-video"
-        position="0 0 0.01"
-        visible="false"
-      ></a-video>
+      <!-- Plano donde se proyecta el video. Ajusta width/height según la proporción del video/obra -->
+      <a-plane id="videoPlane"
+               position="0 0 0"
+               rotation="-90 0 0"
+               width="1.2"
+               height="0.675"
+               material="shader: flat; src: #arVideo; transparent: true;">
+      </a-plane>
     </a-entity>
   </a-scene>
 
   <script>
+    // Elementos DOM
     const label = document.getElementById('label');
     const playBtn = document.getElementById('playBtn');
-    const video = document.getElementById('ar-video');
-    const target = document.getElementById('target');
-    const videoEntity = document.getElementById('videoEntity');
+    const videoOverlay = document.getElementById('videoOverlay');
+    const overlayVideo = document.getElementById('overlayVideo');
+    const closeBtn = document.getElementById('closeBtn');
 
+    // Video asset dentro de a-assets (textura AR)
+    const arVideo = document.getElementById('arVideo');
+
+    // URL del video en Cloudflare R2 (reemplaza si hace falta)
+    const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
+
+    // Configuración inicial del video
+    arVideo.src = VIDEO_URL;
+    arVideo.crossOrigin = "anonymous";
+    arVideo.muted = true; // para permitir autoplay en algunos navegadores
+    arVideo.loop = true;
+    arVideo.playsInline = true;
+
+    // El overlay usa la misma fuente para reproducción en pantalla completa (opcional)
+    overlayVideo.src = VIDEO_URL;
+    overlayVideo.crossOrigin = "anonymous";
+    overlayVideo.playsInline = true;
+
+    // Estado
     let targetDetected = false;
-    let userUnlocked = false;
-    let ready = false;
-    let aspect = 16 / 9;
 
-    function setPlaneAspect() {
-      const base = 1.2;
-      if (aspect >= 1) {
-        videoEntity.setAttribute('width', base);
-        videoEntity.setAttribute('height', base / aspect);
-      } else {
-        videoEntity.setAttribute('height', base);
-        videoEntity.setAttribute('width', base * aspect);
-      }
-    }
+    // Referencia a la entidad target de A-Frame
+    const targetEntity = document.querySelector('[mindar-image-target]');
 
-    function loadMeta() {
-      return new Promise((resolve) => {
-        const done = () => {
-          if (video.videoWidth && video.videoHeight) aspect = video.videoWidth / video.videoHeight;
-          setPlaneAspect();
-          ready = true;
-          resolve();
-        };
-        if (video.readyState >= 1) done();
-        else video.addEventListener('loadedmetadata', done, { once: true });
-      });
-    }
-
-    async function unlockVideo() {
-      try {
-        await loadMeta();
-        await video.play();
-        video.pause();
-        video.currentTime = 0;
-        userUnlocked = true;
-        playBtn.style.display = 'block';
-        label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video listo. Escanea la obra';
-      } catch (e) {
-        label.textContent = 'No se pudo preparar el video';
-        console.log(e);
-      }
-    }
-
-    async function startVideo() {
-      try {
-        if (!userUnlocked) await unlockVideo();
-        if (!ready) await loadMeta();
-        setPlaneAspect();
-        videoEntity.setAttribute('visible', true);
-        await video.play();
-        label.textContent = 'Video reproduciéndose';
-        playBtn.textContent = 'Pausar video';
-      } catch (e) {
-        label.textContent = 'No se pudo reproducir el video';
-        console.log(e);
-      }
-    }
-
-    function stopVideo() {
-      video.pause();
-      video.currentTime = 0;
-      videoEntity.setAttribute('visible', false);
-      playBtn.textContent = 'Reproducir video';
-      label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video detenido';
-    }
-
-    playBtn.addEventListener('click', async () => {
-      if (video.paused) await startVideo();
-      else stopVideo();
-    });
-
-    target.addEventListener('targetFound', () => {
+    // Eventos MindAR: targetFound / targetLost se emiten por la entidad target
+    targetEntity.addEventListener('targetFound', () => {
       targetDetected = true;
+      label.textContent = 'Obra detectada. Pulsa Ver video';
       playBtn.style.display = 'block';
-      label.textContent = 'Obra detectada. Pulsa reproducir';
-      if (!userUnlocked) unlockVideo();
+      // reproducir la textura AR si ya hay permiso
+      // no forzamos autoplay aquí porque móviles requieren gesto del usuario
     });
 
-    target.addEventListener('targetLost', () => {
+    targetEntity.addEventListener('targetLost', () => {
       targetDetected = false;
-      stopVideo();
-      label.textContent = userUnlocked ? 'Apunta otra vez a la obra' : 'Escanea la obra';
+      label.textContent = 'Escanea la obra';
+      playBtn.style.display = 'none';
+      // Pausar la textura AR
+      if (!arVideo.paused) arVideo.pause();
+      // cerrar overlay si estaba abierto
+      overlayVideo.pause();
+      videoOverlay.style.display = 'none';
     });
 
-    loadMeta();
+    // Botón para reproducir el video (user gesture para móviles)
+    playBtn.addEventListener('click', async () => {
+      try {
+        // reproducir la textura AR (muted para autoplay)
+        if (arVideo.paused) {
+          await arVideo.play();
+        }
+        // mostrar overlay con controles (si quieres ver en pantalla completa)
+        videoOverlay.style.display = 'flex';
+        // reproducir overlay (con sonido si el usuario lo activa)
+        await overlayVideo.play();
+        label.textContent = 'Video reproduciéndose';
+      } catch (err) {
+        console.error('Error al reproducir video:', err);
+        label.textContent = 'No se pudo abrir el video. Toca la pantalla para permitir reproducción';
+      }
+    });
+
+    // Cerrar overlay
+    closeBtn.addEventListener('click', () => {
+      overlayVideo.pause();
+      videoOverlay.style.display = 'none';
+      label.textContent = targetDetected ? 'Obra detectada. Pulsa Ver video' : 'Escanea la obra';
+    });
+
+    // Cuando el usuario interactúa por primera vez, quitar el mute del overlay si lo desea
+    // (opcional) permitir que el overlay tenga sonido tras gesto
+    document.addEventListener('click', function firstUserGesture() {
+      // desbloquea reproducción con sonido en overlay si el usuario lo desea
+      overlayVideo.muted = false;
+      // quitamos este listener
+      document.removeEventListener('click', firstUserGesture);
+    });
+
+    // Iniciar MindAR programáticamente cuando la escena esté lista (opcional)
+    const sceneEl = document.querySelector('a-scene');
+    sceneEl.addEventListener('loaded', async () => {
+      // start del sistema MindAR (la librería normalmente inicia sola con uiLoading/uiScanning)
+      try {
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        if (mindarSystem && typeof mindarSystem.start === 'function') {
+          // No forzamos start aquí para evitar pedir permisos antes de tiempo.
+          // Si quieres iniciar automáticamente, descomenta la línea siguiente:
+          // await mindarSystem.start();
+        }
+      } catch (e) {
+        console.warn('No se pudo iniciar MindAR programáticamente:', e);
+      }
+    });
   </script>
 
 </body>
