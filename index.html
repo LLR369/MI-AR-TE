@@ -17,7 +17,6 @@
       background: #000;
       font-family: Arial, sans-serif;
     }
-
     #label {
       position: fixed;
       left: 50%;
@@ -34,7 +33,7 @@
 </head>
 <body>
 
-  <div id="label">Abre la cámara y apunta a la obra</div>
+  <div id="label">Apunta a la obra</div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
@@ -44,16 +43,7 @@
     device-orientation-permission-ui="enabled: false"
   >
     <a-assets>
-      <video
-        id="ar-video"
-        src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm"
-        preload="auto"
-        playsinline
-        webkit-playsinline
-        muted
-        loop
-        crossorigin="anonymous"
-      ></video>
+      <img id="test-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/512px-React-icon.svg.png" crossorigin="anonymous">
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -63,31 +53,21 @@
         position="0 0 0.01"
         width="1"
         height="1"
-        material="src: #ar-video; shader: flat; side: double"
+        material="src: #test-image; shader: flat; side: double"
       ></a-plane>
     </a-entity>
   </a-scene>
 
   <script>
     const label = document.getElementById('label');
-    const video = document.getElementById('ar-video');
     const target = document.getElementById('target');
 
-    target.addEventListener('targetFound', async () => {
-      label.textContent = 'Obra detectada';
-      try {
-        video.currentTime = 0;
-        await video.play();
-        label.textContent = 'Video enlazado reproduciendo';
-      } catch (e) {
-        label.textContent = 'Detectó la obra pero no reprodujo el video';
-        console.log(e);
-      }
+    target.addEventListener('targetFound', () => {
+      label.textContent = 'Obra detectada e imagen mostrada';
     });
 
     target.addEventListener('targetLost', () => {
       label.textContent = 'Apunta a la obra';
-      video.pause();
     });
   </script>
 
