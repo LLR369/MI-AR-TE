@@ -12,6 +12,8 @@
     html,body { margin:0; height:100%; background:transparent; font-family:Arial,Helvetica,sans-serif; }
     #label { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(0,0,0,.72); color:#fff; padding:10px 16px; border-radius:999px; font-size:14px; z-index:9999; max-width:90vw; text-align:center; }
     #playBtn { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#111; color:#fff; border:0; border-radius:999px; padding:14px 20px; font-size:16px; font-weight:700; z-index:10000; display:none; }
+    #audioToggle { display:none; position:fixed; left:50%; top:calc(50% + 70px); transform:translateX(-50%); background:#222; color:#fff; border:0; border-radius:999px; padding:10px 14px; z-index:10000; }
+    #togglePlay { display:none; position:fixed; left:50%; top:calc(50% + 120px); transform:translateX(-50%); background:#0a84ff; color:#fff; border:0; border-radius:999px; padding:10px 14px; z-index:10000; }
     #videoOverlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:10001; }
     #videoBox { position:relative; width:min(92vw,900px); max-height:85vh; }
     #overlayVideo { width:100%; max-height:85vh; display:block; background:#000; border-radius:16px; }
@@ -22,6 +24,8 @@
 
   <div id="label">Escanea la obra</div>
   <button id="playBtn">Ver video</button>
+  <button id="audioToggle">Activar audio</button>
+  <button id="togglePlay">Reproducir</button>
 
   <div id="videoOverlay">
     <div id="videoBox">
@@ -64,6 +68,8 @@
     // DOM
     const label = document.getElementById('label');
     const playBtn = document.getElementById('playBtn');
+    const audioToggle = document.getElementById('audioToggle');
+    const togglePlay = document.getElementById('togglePlay');
     const videoOverlay = document.getElementById('videoOverlay');
     const overlayVideo = document.getElementById('overlayVideo');
     const closeBtn = document.getElementById('closeBtn');
@@ -90,12 +96,26 @@
     let syncInterval = null;
 
     const targetEntity = document.querySelector('[mindar-image-target]');
+    const sceneEl = document.querySelector('a-scene');
+
+    // Ajustar automáticamente el tamaño del plano según la relación de aspecto del video
+    arVideo.addEventListener('loadedmetadata', () => {
+      const vw = arVideo.videoWidth || 16;
+      const vh = arVideo.videoHeight || 9;
+      const aspect = vw / vh;
+      const baseHeight = 0.675; // referencia de altura
+      const newWidth = baseHeight * aspect;
+      videoPlane.setAttribute('width', newWidth);
+      videoPlane.setAttribute('height', baseHeight);
+    });
 
     // Cuando se detecta el target: mostrar plano y reproducir textura (si hubo gesto)
     targetEntity.addEventListener('targetFound', async () => {
       targetDetected = true;
       label.textContent = 'Obra detectada. Pulsa Ver video';
       playBtn.style.display = 'block';
+      audioToggle.style.display = 'block';
+      togglePlay.style.display = 'block';
       // Mostrar el plano frontal que sigue el movimiento del target
       videoPlane.setAttribute('visible', 'true');
 
@@ -114,6 +134,8 @@
       targetDetected = false;
       label.textContent = 'Escanea la obra';
       playBtn.style.display = 'none';
+      audioToggle.style.display = 'none';
+      togglePlay.style.display = 'none';
       // ocultar el plano que sigue el target
       videoPlane.setAttribute('visible', 'false');
       // pausar la textura AR
@@ -178,7 +200,7 @@
         videoOverlay.style.display = 'flex';
 
         if (ok) {
-          // overlay reproduce el stream sin descargar otra vez
+          // overlay usa el stream del arVideo (no recarga)
           try { await overlayVideo.play(); } catch (e) {}
         } else {
           // Fallback: pausamos la textura AR para evitar duplicado y reproducimos solo el overlay
@@ -193,6 +215,7 @@
         }
 
         label.textContent = 'Video reproduciéndose';
+        togglePlay.textContent = 'Pausar';
       } catch (err) {
         console.error('Error al reproducir video:', err);
         label.textContent = 'No se pudo abrir el video. Toca la pantalla para permitir reproducción';
@@ -221,9 +244,48 @@
           await arVideo.play().catch(()=>{});
         }
         label.textContent = targetDetected ? 'Obra detectada. Pulsa Ver video' : 'Escanea la obra';
+        togglePlay.textContent = 'Reproducir';
       } catch (e) {
         console.warn('Error al cerrar overlay:', e);
         label.textContent = 'Escanea la obra';
+      }
+    });
+
+    // Botón audioToggle: alterna audio del overlay (no afecta la textura AR)
+    audioToggle.addEventListener('click', () => {
+      if (overlayVideo.muted) {
+        overlayVideo.muted = false;
+        audioToggle.textContent = 'Silenciar audio';
+      } else {
+        overlayVideo.muted = true;
+        audioToggle.textContent = 'Activar audio';
+      }
+    });
+
+    // Botón togglePlay: controla reproducción central (overlay si visible, si no la textura AR)
+    togglePlay.addEventListener('click', async () => {
+      try {
+        if (videoOverlay.style.display === 'flex') {
+          // overlay visible: controlar overlay
+          if (overlayVideo.paused) {
+            await overlayVideo.play();
+            togglePlay.textContent = 'Pausar';
+          } else {
+            overlayVideo.pause();
+            togglePlay.textContent = 'Reproducir';
+          }
+        } else {
+          // overlay no visible: controlar textura AR
+          if (arVideo.paused) {
+            await arVideo.play();
+            togglePlay.textContent = 'Pausar';
+          } else {
+            arVideo.pause();
+            togglePlay.textContent = 'Reproducir';
+          }
+        }
+      } catch (e) {
+        console.warn('Control play/pause falló:', e);
       }
     });
 
@@ -256,8 +318,25 @@
       console.error('Error en overlayVideo:', e);
     });
 
+    // Opcional: mantener el plano orientado hacia la cámara en Y (billboard)
+    // Si quieres que el plano siempre mire al usuario en Y, descomenta el bloque siguiente.
+    /*
+    sceneEl.addEventListener('renderstart', () => {
+      const cameraEl = document.querySelector('a-camera');
+      sceneEl.addEventListener('frame', () => {
+        if (videoPlane.getAttribute('visible') === 'true') {
+          const camPos = cameraEl.object3D.getWorldPosition(new THREE.Vector3());
+          const planePos = videoPlane.object3D.getWorldPosition(new THREE.Vector3());
+          const dx = camPos.x - planePos.x;
+          const dz = camPos.z - planePos.z;
+          const yaw = Math.atan2(dx, dz) * (180 / Math.PI);
+          videoPlane.setAttribute('rotation', `0 ${yaw} 0`);
+        }
+      });
+    });
+    */
+
     // Iniciar MindAR cuando la escena esté lista (opcional)
-    const sceneEl = document.querySelector('a-scene');
     sceneEl.addEventListener('loaded', async () => {
       try {
         const mindarSystem = sceneEl.systems['mindar-image'];
