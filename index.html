@@ -40,153 +40,154 @@
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
   >
-    <!-- assets: el video se carga aquí como textura -->
     <a-assets>
-      <!-- IMPORTANTE: la URL del video debe permitir CORS (Access-Control-Allow-Origin) -->
+      <!-- Video maestro (textura AR). Debe permitir CORS -->
       <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop muted></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Entidad objetivo: el contenido se coloca dentro para que siga el target -->
+    <!-- Target: plano frontal en Z; visible controlado por JS -->
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <!-- Plano donde se proyecta el video. Ajusta width/height según la proporción del video/obra -->
       <a-plane id="videoPlane"
-               position="0 0 0"
-               rotation="-90 0 0"
+               visible="false"
+               position="0 0 0.01"
+               rotation="0 0 0"
                width="1.2"
                height="0.675"
-               material="shader: flat; src: #arVideo; transparent: true;">
+               material="shader: flat; src: #arVideo; side: double; transparent: true;">
       </a-plane>
     </a-entity>
   </a-scene>
 
   <script>
-    // Elementos DOM
+    // DOM
     const label = document.getElementById('label');
     const playBtn = document.getElementById('playBtn');
     const videoOverlay = document.getElementById('videoOverlay');
     const overlayVideo = document.getElementById('overlayVideo');
     const closeBtn = document.getElementById('closeBtn');
-
-    // Video asset dentro de a-assets (textura AR)
     const arVideo = document.getElementById('arVideo');
+    const videoPlane = document.getElementById('videoPlane');
 
-    // URL del video en Cloudflare R2 (reemplaza si hace falta)
+    // URL del video
     const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
 
-    // Configuración inicial del video maestro (textura)
+    // Configuración inicial
     arVideo.src = VIDEO_URL;
     arVideo.crossOrigin = "anonymous";
-    arVideo.muted = true; // permite autoplay en móviles
+    arVideo.muted = true; // textura muteada para permitir autoplay
     arVideo.loop = true;
     arVideo.playsInline = true;
     arVideo.preload = "auto";
 
-    // Overlay no tendrá src directo inicialmente
     overlayVideo.crossOrigin = "anonymous";
     overlayVideo.playsInline = true;
     overlayVideo.preload = "metadata";
 
-    // Estado
     let targetDetected = false;
-    let streamMirroring = false;
-    let syncingInterval = null;
+    let usingCaptureStream = false;
+    let syncInterval = null;
 
-    // Referencia a la entidad target de A-Frame
     const targetEntity = document.querySelector('[mindar-image-target]');
 
-    // Eventos MindAR
-    targetEntity.addEventListener('targetFound', () => {
+    // Cuando se detecta el target: mostrar plano y reproducir textura (si hubo gesto)
+    targetEntity.addEventListener('targetFound', async () => {
       targetDetected = true;
       label.textContent = 'Obra detectada. Pulsa Ver video';
       playBtn.style.display = 'block';
+      // Mostrar el plano frontal que sigue el movimiento del target
+      videoPlane.setAttribute('visible', 'true');
+
+      // Intentamos reproducir la textura si el usuario ya interactuó (o el navegador lo permite)
+      try {
+        if (arVideo.paused) {
+          await arVideo.play().catch(()=>{});
+        }
+      } catch (e) {
+        // si falla, dejamos que el usuario pulse Ver video
+      }
     });
 
+    // Cuando se pierde el target: ocultar plano y pausar textura
     targetEntity.addEventListener('targetLost', () => {
       targetDetected = false;
       label.textContent = 'Escanea la obra';
       playBtn.style.display = 'none';
-      // Pausar la textura AR (maestra)
+      // ocultar el plano que sigue el target
+      videoPlane.setAttribute('visible', 'false');
+      // pausar la textura AR
       if (!arVideo.paused) arVideo.pause();
       // cerrar overlay si estaba abierto
       if (!overlayVideo.paused) overlayVideo.pause();
       videoOverlay.style.display = 'none';
-      // limpiar sincronización si existe
       stopSyncFallback();
+      if (usingCaptureStream) {
+        overlayVideo.srcObject = null;
+        usingCaptureStream = false;
+      }
     });
 
-    // Función para iniciar mirror con captureStream (si está disponible)
-    function tryUseCaptureStream() {
+    // Intentar usar captureStream para el overlay (mejor)
+    function enableCaptureStream() {
       if (typeof arVideo.captureStream === 'function') {
         try {
           const stream = arVideo.captureStream();
           overlayVideo.srcObject = stream;
-          streamMirroring = true;
+          usingCaptureStream = true;
           return true;
         } catch (e) {
           console.warn('captureStream falló:', e);
-          streamMirroring = false;
+          usingCaptureStream = false;
           return false;
         }
       }
       return false;
     }
 
-    // Fallback: sincronizar currentTime entre arVideo y overlayVideo
+    // Fallback: sincronizar tiempos entre arVideo y overlayVideo
     function startSyncFallback() {
       stopSyncFallback();
-      syncingInterval = setInterval(() => {
-        const diff = Math.abs((arVideo.currentTime || 0) - (overlayVideo.currentTime || 0));
+      syncInterval = setInterval(() => {
+        const a = arVideo.currentTime || 0;
+        const b = overlayVideo.currentTime || 0;
+        const diff = Math.abs(a - b);
         if (diff > 0.25) {
-          try {
-            overlayVideo.currentTime = arVideo.currentTime;
-          } catch (e) {
-            // algunos navegadores bloquean set currentTime si no hay interacción
-          }
+          try { overlayVideo.currentTime = a; } catch (e) {}
         }
         if (arVideo.paused && !overlayVideo.paused) overlayVideo.pause();
-        if (!arVideo.paused && overlayVideo.paused) {
-          overlayVideo.play().catch(()=>{});
-        }
+        if (!arVideo.paused && overlayVideo.paused) overlayVideo.play().catch(()=>{});
       }, 250);
     }
-
     function stopSyncFallback() {
-      if (syncingInterval) {
-        clearInterval(syncingInterval);
-        syncingInterval = null;
-      }
+      if (syncInterval) { clearInterval(syncInterval); syncInterval = null; }
     }
 
-    // Botón para reproducir el video (user gesture para móviles)
+    // Botón reproducir: abre overlay y gestiona duplicados
     playBtn.addEventListener('click', async () => {
       try {
-        // Intentar usar captureStream para evitar recargas
-        const usedCapture = tryUseCaptureStream();
+        // Intentar mirror con captureStream
+        const ok = enableCaptureStream();
 
-        // Reproducir la textura AR (maestra). Está muteada para permitir autoplay.
+        // Si la textura AR está pausada, reproducirla (maestra)
         if (arVideo.paused) {
-          await arVideo.play();
+          await arVideo.play().catch(()=>{});
         }
 
         // Mostrar overlay
         videoOverlay.style.display = 'flex';
 
-        if (usedCapture) {
-          // Si usamos captureStream, overlayVideo reproducirá el stream automáticamente
-          try {
-            await overlayVideo.play();
-          } catch (e) {
-            // algunos navegadores requieren interacción para reproducir audio; overlay está sin audio por defecto
-          }
+        if (ok) {
+          // overlay reproduce el stream sin descargar otra vez
+          try { await overlayVideo.play(); } catch (e) {}
         } else {
-          // Fallback: usar la misma URL pero sincronizar tiempos para evitar recarga completa
-          if (!overlayVideo.src || overlayVideo.src !== VIDEO_URL) {
-            overlayVideo.src = VIDEO_URL;
-            overlayVideo.currentTime = arVideo.currentTime || 0;
-            overlayVideo.muted = true; // mantener silencio hasta que el usuario interactúe
-          }
+          // Fallback: pausamos la textura AR para evitar duplicado y reproducimos solo el overlay
+          const current = arVideo.currentTime || 0;
+          if (!arVideo.paused) arVideo.pause();
+          overlayVideo.srcObject = null;
+          overlayVideo.src = VIDEO_URL;
+          overlayVideo.currentTime = current;
+          overlayVideo.muted = false; // permitir sonido en overlay tras gesto
           await overlayVideo.play().catch(()=>{});
           startSyncFallback();
         }
@@ -198,37 +199,55 @@
       }
     });
 
-    // Cerrar overlay
-    closeBtn.addEventListener('click', () => {
-      overlayVideo.pause();
-      videoOverlay.style.display = 'none';
-      label.textContent = targetDetected ? 'Obra detectada. Pulsa Ver video' : 'Escanea la obra';
-      stopSyncFallback();
+    // Cerrar overlay: reanudar textura AR si corresponde
+    closeBtn.addEventListener('click', async () => {
+      if (usingCaptureStream) {
+        overlayVideo.pause();
+        videoOverlay.style.display = 'none';
+        label.textContent = targetDetected ? 'Obra detectada. Pulsa Ver video' : 'Escanea la obra';
+        stopSyncFallback();
+        return;
+      }
+
+      try {
+        const current = overlayVideo.currentTime || 0;
+        overlayVideo.pause();
+        overlayVideo.src = '';
+        videoOverlay.style.display = 'none';
+        stopSyncFallback();
+        // reanudar textura AR en el mismo tiempo si el target sigue detectado
+        arVideo.currentTime = current;
+        if (targetDetected) {
+          await arVideo.play().catch(()=>{});
+        }
+        label.textContent = targetDetected ? 'Obra detectada. Pulsa Ver video' : 'Escanea la obra';
+      } catch (e) {
+        console.warn('Error al cerrar overlay:', e);
+        label.textContent = 'Escanea la obra';
+      }
     });
 
-    // Primer gesto del usuario desbloquea audio del overlay
+    // Primer gesto desbloquea audio del overlay
     function firstUserGesture() {
       overlayVideo.muted = false;
       document.removeEventListener('click', firstUserGesture);
     }
     document.addEventListener('click', firstUserGesture);
 
-    // Manejo de visibilidad: pausar cuando la pestaña no está visible para evitar problemas de buffer
+    // Visibilidad y limpieza
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         if (!arVideo.paused) arVideo.pause();
         if (!overlayVideo.paused) overlayVideo.pause();
       }
     });
-
-    // Manejo de pagehide/unload para liberar recursos
     window.addEventListener('pagehide', () => {
       if (!arVideo.paused) arVideo.pause();
       if (!overlayVideo.paused) overlayVideo.pause();
       stopSyncFallback();
     });
 
-    // Escuchar errores de red/decodificación para mostrar mensaje útil
+    // Errores
     arVideo.addEventListener('error', (e) => {
       console.error('Error en arVideo:', e);
       label.textContent = 'Error cargando el video (textura). Revisa CORS o la URL.';
@@ -237,13 +256,13 @@
       console.error('Error en overlayVideo:', e);
     });
 
-    // Iniciar MindAR programáticamente cuando la escena esté lista (opcional)
+    // Iniciar MindAR cuando la escena esté lista (opcional)
     const sceneEl = document.querySelector('a-scene');
     sceneEl.addEventListener('loaded', async () => {
       try {
         const mindarSystem = sceneEl.systems['mindar-image'];
         if (mindarSystem && typeof mindarSystem.start === 'function') {
-          // Si prefieres iniciar automáticamente, descomenta la siguiente línea:
+          // Si quieres iniciar automáticamente, descomenta:
           // await mindarSystem.start();
         }
       } catch (e) {
