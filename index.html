@@ -14,9 +14,10 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
+      background: transparent;
       font-family: Arial, sans-serif;
     }
+
     #label {
       position: fixed;
       left: 50%;
@@ -38,36 +39,73 @@
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
     color-space="sRGB"
-    renderer="colorManagement: true, physicallyCorrectLights"
+    renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
+    background="transparent: true"
+    embedded
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
   >
     <a-assets>
-      <img id="test-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/512px-React-icon.svg.png" crossorigin="anonymous">
+      <video
+        id="ar-video"
+        src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm"
+        preload="auto"
+        playsinline
+        webkit-playsinline
+        muted
+        loop
+        crossorigin="anonymous"
+      ></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="target" mindar-image-target="targetIndex: 0">
       <a-plane
+        id="video-plane"
         position="0 0 0.01"
         width="1"
         height="1"
-        material="src: #test-image; shader: flat; side: double"
+        material="src: #ar-video; shader: flat; side: double; transparent: true"
+        visible="false"
       ></a-plane>
     </a-entity>
   </a-scene>
 
   <script>
     const label = document.getElementById('label');
+    const video = document.getElementById('ar-video');
     const target = document.getElementById('target');
+    const plane = document.getElementById('video-plane');
 
-    target.addEventListener('targetFound', () => {
-      label.textContent = 'Obra detectada e imagen mostrada';
+    async function tryPlayVideo() {
+      try {
+        video.currentTime = 0;
+        await video.play();
+        plane.setAttribute('visible', true);
+        label.textContent = 'Video reproduciendo';
+      } catch (e) {
+        plane.setAttribute('visible', false);
+        label.textContent = 'Detectó la obra pero el video no reprodujo';
+        console.log('Error al reproducir video:', e);
+      }
+    }
+
+    target.addEventListener('targetFound', async () => {
+      label.textContent = 'Obra detectada';
+      await tryPlayVideo();
     });
 
     target.addEventListener('targetLost', () => {
       label.textContent = 'Apunta a la obra';
+      video.pause();
+      plane.setAttribute('visible', false);
+    });
+
+    window.addEventListener('click', async () => {
+      if (video.paused) {
+        await tryPlayVideo();
+      }
     });
   </script>
 
