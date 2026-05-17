@@ -18,6 +18,14 @@
       background: transparent;
       font-family: Arial, sans-serif;
     }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
     #label {
       position: fixed;
       left: 50%;
@@ -28,29 +36,38 @@
       padding: 10px 16px;
       border-radius: 999px;
       font-size: 14px;
-      z-index: 9999;
-      max-width: 90vw;
       text-align: center;
+      max-width: 90vw;
     }
-    #startBtn {
+
+    #playBtn {
       position: fixed;
       left: 50%;
-      top: 20px;
-      transform: translateX(-50%);
-      z-index: 9999;
-      padding: 12px 18px;
-      border: 0;
-      border-radius: 999px;
+      top: 50%;
+      transform: translate(-50%, -50%);
       background: #111;
       color: #fff;
-      font-size: 14px;
+      border: 0;
+      border-radius: 999px;
+      padding: 16px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      pointer-events: auto;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,.28);
+    }
+
+    #playBtn:active {
+      transform: translate(-50%, -50%) scale(0.98);
     }
   </style>
 </head>
 <body>
 
-  <button id="startBtn">Activar video</button>
-  <div id="label">Pulsa activar video y apunta a la obra</div>
+  <div id="ui">
+    <button id="playBtn">Reproducir video</button>
+    <div id="label">Escanea la obra</div>
+  </div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
@@ -90,67 +107,87 @@
 
   <script>
     const label = document.getElementById('label');
-    const startBtn = document.getElementById('startBtn');
+    const playBtn = document.getElementById('playBtn');
     const video = document.getElementById('ar-video');
     const target = document.getElementById('target');
     const videoEntity = document.getElementById('videoEntity');
 
-    let unlocked = false;
-    let targetFound = false;
+    let targetDetected = false;
+    let userUnlocked = false;
 
-    async function unlockVideo() {
+    async function prepareVideo() {
       try {
+        video.muted = true;
         await video.play();
         video.pause();
         video.currentTime = 0;
-        unlocked = true;
-        startBtn.style.display = 'none';
-        label.textContent = 'Video activado. Ahora apunta a la obra';
+        userUnlocked = true;
+        label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video listo. Escanea la obra';
+        playBtn.style.display = 'block';
       } catch (e) {
-        label.textContent = 'No se pudo activar el video';
+        label.textContent = 'El navegador bloqueó el video';
         console.log(e);
       }
     }
 
-    async function playOnTarget() {
-      if (!unlocked) {
-        label.textContent = 'Primero pulsa Activar video';
-        return;
-      }
-      if (!targetFound) return;
-
+    async function startVideo() {
       try {
+        if (!userUnlocked) {
+          await prepareVideo();
+        }
         videoEntity.setAttribute('visible', true);
         await video.play();
-        label.textContent = 'Video reproduciendo';
+        label.textContent = 'Video reproduciéndose';
+        playBtn.textContent = 'Pausar video';
+        playBtn.style.display = 'block';
       } catch (e) {
-        videoEntity.setAttribute('visible', false);
-        label.textContent = 'Detectó la obra pero no reprodujo';
+        label.textContent = 'No se pudo reproducir el video';
         console.log(e);
       }
     }
 
-    startBtn.addEventListener('click', unlockVideo);
+    function stopVideo() {
+      video.pause();
+      videoEntity.setAttribute('visible', false);
+      playBtn.textContent = 'Reproducir video';
+      label.textContent = 'Video detenido';
+    }
 
-    target.addEventListener('targetFound', async () => {
-      targetFound = true;
-      label.textContent = 'Obra detectada';
-      await playOnTarget();
+    playBtn.addEventListener('click', async () => {
+      if (video.paused) {
+        await startVideo();
+      } else {
+        stopVideo();
+      }
+    });
+
+    target.addEventListener('targetFound', () => {
+      targetDetected = true;
+      label.textContent = 'Obra detectada. Pulsa reproducir';
+      playBtn.style.display = 'block';
+      if (!userUnlocked) {
+        prepareVideo();
+      }
     });
 
     target.addEventListener('targetLost', () => {
-      targetFound = false;
-      video.pause();
-      videoEntity.setAttribute('visible', false);
-      label.textContent = 'Apunta otra vez a la obra';
-    });
-
-    video.addEventListener('loadeddata', () => {
-      if (!unlocked) label.textContent = 'Video cargado. Pulsa Activar video';
+      targetDetected = false;
+      stopVideo();
+      if (userUnlocked) {
+        label.textContent = 'Apunta otra vez a la obra';
+      } else {
+        label.textContent = 'Escanea la obra';
+      }
     });
 
     video.addEventListener('error', () => {
-      label.textContent = 'Error cargando el video';
+      label.textContent = 'Error con el archivo de video';
+    });
+
+    video.addEventListener('loadeddata', () => {
+      if (!targetDetected) {
+        label.textContent = 'Video cargado. Escanea la obra';
+      }
     });
   </script>
 
