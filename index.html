@@ -11,20 +11,22 @@
   <style>
     html,body { margin:0; height:100%; background:transparent; font-family:Arial,Helvetica,sans-serif; -webkit-tap-highlight-color: transparent; }
     #label { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(0,0,0,.72); color:#fff; padding:8px 12px; border-radius:999px; font-size:13px; z-index:9999; max-width:90vw; text-align:center; pointer-events:none; }
-    /* Contenedor de controles en fila, alineado abajo */
+    /* Contenedor de controles en fila, alineado justo encima del label */
     #controls {
       position:fixed;
       left:50%;
-      bottom:18px;
+      bottom:90px; /* arriba del label para no taparlo */
       transform:translateX(-50%);
       display:flex;
       gap:12px;
       align-items:center;
       z-index:10000;
       pointer-events:auto;
-      transition:opacity .25s ease;
+      transition:opacity .25s ease, transform .2s ease;
       opacity:0;
       visibility:hidden;
+      transform-origin:center;
+      transform:translateX(-50%) translateY(6px);
     }
     /* Botones circulares con iconos SVG */
     .ctrl-btn {
@@ -45,7 +47,7 @@
     .ctrl-btn svg { width:22px; height:22px; display:block; fill:currentColor; }
 
     /* Visible state for controls */
-    #controls.visible { opacity:1; visibility:visible; }
+    #controls.visible { opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
 
     /* Overlay */
     #videoOverlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:10001; }
@@ -64,7 +66,7 @@
   <div id="controls" aria-hidden="true">
     <!-- Play overlay (icono: expandir/reproducir) -->
     <button id="playBtn" class="ctrl-btn" title="Ver video (pantalla grande)" aria-label="Ver video">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z" fill="none"/><path d="M8 6v12l10-6z"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
     </button>
 
     <!-- Toggle play/pause (control central) -->
@@ -169,10 +171,9 @@
 
     // Mostrar controles (aparecen en fila inferior) y auto-ocultar
     function showControlsTemporarily() {
-      if (!targetDetected) return; // solo mostrar si el target está detectado
+      if (!targetDetected) return;
       controls.classList.add('visible');
       controls.setAttribute('aria-hidden', 'false');
-      // limpiar timeout previo
       if (controlsTimeout) clearTimeout(controlsTimeout);
       controlsTimeout = setTimeout(hideControls, CONTROLS_HIDE_MS);
     }
@@ -182,12 +183,11 @@
       if (controlsTimeout) { clearTimeout(controlsTimeout); controlsTimeout = null; }
     }
 
-    // Mostrar controles al tocar la pantalla (o click) — aparece solo si target detectado
+    // Mostrar controles al tocar la pantalla (o click)
     function onUserTap() {
       if (!targetDetected) return;
       showControlsTemporarily();
     }
-    // Escuchar taps/clicks en la escena y en la página
     document.addEventListener('click', onUserTap, { passive: true });
     document.addEventListener('touchstart', onUserTap, { passive: true });
 
@@ -195,32 +195,22 @@
     targetEntity.addEventListener('targetFound', async () => {
       targetDetected = true;
       label.textContent = 'Obra detectada. Toca la pantalla para controles';
-      // mostrar controles brevemente para indicar que existen
       showControlsTemporarily();
-      // mostrar el plano que sigue el movimiento del target
       videoPlane.setAttribute('visible', 'true');
-
-      // intentar reproducir la textura si el navegador lo permite
       try {
         if (arVideo.paused) {
           await arVideo.play().catch(()=>{});
         }
-      } catch (e) {
-        // si falla, el usuario puede usar el botón central para reproducir
-      }
+      } catch (e) {}
     });
 
     // Cuando se pierde el target: ocultar plano y pausar textura
     targetEntity.addEventListener('targetLost', () => {
       targetDetected = false;
       label.textContent = 'Escanea la obra';
-      // ocultar controles inmediatamente
       hideControls();
-      // ocultar el plano que sigue el target
       videoPlane.setAttribute('visible', 'false');
-      // pausar la textura AR
       if (!arVideo.paused) arVideo.pause();
-      // cerrar overlay si estaba abierto
       if (!overlayVideo.paused) overlayVideo.pause();
       videoOverlay.style.display = 'none';
       stopSyncFallback();
@@ -234,9 +224,12 @@
     function enableCaptureStream() {
       if (typeof arVideo.captureStream === 'function') {
         try {
+          // recreate stream to ensure audio track presence if arVideo is unmuted
           const stream = arVideo.captureStream();
           overlayVideo.srcObject = stream;
           usingCaptureStream = true;
+          // overlay should follow arVideo muted state
+          overlayVideo.muted = arVideo.muted;
           return true;
         } catch (e) {
           console.warn('captureStream falló:', e);
@@ -271,32 +264,27 @@
       try {
         const ok = enableCaptureStream();
 
-        // Si la textura AR está pausada, reproducirla (maestra)
         if (arVideo.paused) {
           await arVideo.play().catch(()=>{});
         }
 
-        // Mostrar overlay
         videoOverlay.style.display = 'flex';
 
         if (ok) {
-          // overlay usa el stream del arVideo (no recarga)
           try { await overlayVideo.play(); } catch (e) {}
         } else {
-          // Fallback: pausamos la textura AR para evitar duplicado y reproducimos solo el overlay
           const current = arVideo.currentTime || 0;
           if (!arVideo.paused) arVideo.pause();
           overlayVideo.srcObject = null;
           overlayVideo.src = VIDEO_URL;
           overlayVideo.currentTime = current;
-          // overlay por defecto se mantiene silenciado hasta gesto del usuario; no forzamos sonido
+          overlayVideo.muted = true; // por seguridad hasta gesto
           await overlayVideo.play().catch(()=>{});
           startSyncFallback();
         }
 
         label.textContent = 'Video reproduciéndose';
-        togglePlay.textContent = 'Pausar';
-        // mostrar controles mientras overlay está abierto
+        setToggleIconPlaying(true);
         showControlsTemporarily();
       } catch (err) {
         console.error('Error al reproducir video:', err);
@@ -321,33 +309,50 @@
         overlayVideo.src = '';
         videoOverlay.style.display = 'none';
         stopSyncFallback();
-        // reanudar textura AR en el mismo tiempo si el target sigue detectado
         arVideo.currentTime = current;
         if (targetDetected) {
           await arVideo.play().catch(()=>{});
         }
         label.textContent = targetDetected ? 'Obra detectada. Toca la pantalla para controles' : 'Escanea la obra';
-        togglePlay.textContent = 'Reproducir';
+        setToggleIconPlaying(false);
       } catch (e) {
         console.warn('Error al cerrar overlay:', e);
         label.textContent = 'Escanea la obra';
       }
     });
 
-    // Botón audioToggle: alterna audio del overlay (no afecta la textura AR)
-    audioToggle.addEventListener('click', (ev) => {
+    // Audio toggle: funciona con captureStream y con fallback
+    audioToggle.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      // Si overlay no está abierto pero captureStream está en uso, el audio se controla en overlayVideo (srcObject)
-      // Alternar muted del overlayVideo
-      overlayVideo.muted = !overlayVideo.muted;
+      // Si usamos captureStream, el audio real está en arVideo; togglear arVideo.muted y recrear stream si es necesario
+      if (usingCaptureStream) {
+        // user gesture: toggle arVideo.muted
+        arVideo.muted = !arVideo.muted;
+        // recreate stream so audio track presence updates reliably
+        try {
+          overlayVideo.pause();
+          overlayVideo.srcObject = null;
+          const stream = arVideo.captureStream();
+          overlayVideo.srcObject = stream;
+          overlayVideo.muted = arVideo.muted;
+          if (!overlayVideo.paused) {
+            await overlayVideo.play().catch(()=>{});
+          }
+        } catch (e) {
+          console.warn('No se pudo recrear captureStream tras toggle audio:', e);
+        }
+      } else {
+        // fallback: overlay tiene su propia src; togglear overlayVideo.muted
+        overlayVideo.muted = !overlayVideo.muted;
+      }
       updateAudioIcon();
-      // Si el overlay no está abierto y el usuario activa audio, abrir overlay para escuchar (opcional)
-      // No forzamos abrir overlay automáticamente; el usuario puede abrirlo con playBtn.
+      showControlsTemporarily();
     });
 
+    // Actualiza icono de audio según estado efectivo (si usamos captureStream, mirar arVideo.muted)
     function updateAudioIcon() {
-      // Cambia el SVG del icono según estado muted
-      if (overlayVideo.muted) {
+      const muted = usingCaptureStream ? arVideo.muted : overlayVideo.muted;
+      if (muted) {
         // icono mute
         audioIcon.innerHTML = '<path d="M16.5 12c0-1.77-.77-3.37-1.98-4.47l1.42-1.42C18.07 7.9 19 9.86 19 12s-.93 4.1-2.06 5.89l-1.42-1.42C15.73 15.37 16.5 13.77 16.5 12zM5 9v6h4l5 5V4L9 9H5z"/>';
       } else {
@@ -361,7 +366,6 @@
       ev.stopPropagation();
       try {
         if (videoOverlay.style.display === 'flex') {
-          // overlay visible: controlar overlay
           if (overlayVideo.paused) {
             await overlayVideo.play();
             setToggleIconPlaying(true);
@@ -370,7 +374,6 @@
             setToggleIconPlaying(false);
           }
         } else {
-          // overlay no visible: controlar textura AR
           if (arVideo.paused) {
             await arVideo.play();
             setToggleIconPlaying(true);
@@ -379,7 +382,6 @@
             setToggleIconPlaying(false);
           }
         }
-        // mostrar controles brevemente tras la acción
         showControlsTemporarily();
       } catch (e) {
         console.warn('Control play/pause falló:', e);
@@ -388,11 +390,9 @@
 
     function setToggleIconPlaying(isPlaying) {
       if (isPlaying) {
-        // icono pausa
-        toggleIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        toggleIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; // pausa
       } else {
-        // icono play
-        toggleIcon.innerHTML = '<path d="M6 4v16l12-8z"/>';
+        toggleIcon.innerHTML = '<path d="M6 4v16l12-8z"/>'; // play
       }
     }
 
@@ -400,10 +400,8 @@
     setToggleIconPlaying(false);
     updateAudioIcon();
 
-    // Primer gesto desbloquea audio del overlay (si el usuario lo desea)
+    // Primer gesto desbloquea posibilidad de audio (no desmutea por sí solo)
     function firstUserGesture() {
-      // no desmutear automáticamente; solo desbloquea la posibilidad de reproducir audio
-      // si el usuario ya pulsó audioToggle, overlayVideo.muted será false
       document.removeEventListener('click', firstUserGesture);
     }
     document.addEventListener('click', firstUserGesture);
@@ -429,24 +427,6 @@
     overlayVideo.addEventListener('error', (e) => {
       console.error('Error en overlayVideo:', e);
     });
-
-    // Opcional: mantener el plano orientado hacia la cámara en Y (billboard)
-    // Si quieres que el plano siempre mire al usuario en Y, descomenta el bloque siguiente.
-    /*
-    sceneEl.addEventListener('renderstart', () => {
-      const cameraEl = document.querySelector('a-camera');
-      sceneEl.addEventListener('frame', () => {
-        if (videoPlane.getAttribute('visible') === 'true') {
-          const camPos = cameraEl.object3D.getWorldPosition(new THREE.Vector3());
-          const planePos = videoPlane.object3D.getWorldPosition(new THREE.Vector3());
-          const dx = camPos.x - planePos.x;
-          const dz = camPos.z - planePos.z;
-          const yaw = Math.atan2(dx, dz) * (180 / Math.PI);
-          videoPlane.setAttribute('rotation', `0 ${yaw} 0`);
-        }
-      });
-    });
-    */
 
     // Iniciar MindAR cuando la escena esté lista (opcional)
     sceneEl.addEventListener('loaded', async () => {
