@@ -98,8 +98,6 @@
         id="videoEntity"
         src="#ar-video"
         position="0 0 0.01"
-        width="1"
-        height="1"
         visible="false"
       ></a-video>
     </a-entity>
@@ -114,32 +112,63 @@
 
     let targetDetected = false;
     let userUnlocked = false;
+    let ready = false;
+    let aspect = 16 / 9;
 
-    async function prepareVideo() {
+    function setPlaneAspect() {
+      const base = 1.2;
+      if (aspect >= 1) {
+        videoEntity.setAttribute('width', base);
+        videoEntity.setAttribute('height', base / aspect);
+      } else {
+        videoEntity.setAttribute('height', base);
+        videoEntity.setAttribute('width', base * aspect);
+      }
+    }
+
+    async function loadMeta() {
+      return new Promise((resolve) => {
+        const done = () => {
+          if (video.videoWidth && video.videoHeight) {
+            aspect = video.videoWidth / video.videoHeight;
+          }
+          setPlaneAspect();
+          ready = true;
+          resolve();
+        };
+        if (video.readyState >= 1) {
+          done();
+        } else {
+          video.addEventListener('loadedmetadata', done, { once: true });
+        }
+      });
+    }
+
+    async function unlockVideo() {
       try {
-        video.muted = true;
+        await loadMeta();
         await video.play();
         video.pause();
         video.currentTime = 0;
         userUnlocked = true;
-        label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video listo. Escanea la obra';
+        playBtn.textContent = 'Reproducir video';
         playBtn.style.display = 'block';
+        label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video listo. Escanea la obra';
       } catch (e) {
-        label.textContent = 'El navegador bloqueó el video';
+        label.textContent = 'No se pudo preparar el video';
         console.log(e);
       }
     }
 
     async function startVideo() {
       try {
-        if (!userUnlocked) {
-          await prepareVideo();
-        }
+        if (!userUnlocked) await unlockVideo();
+        if (!ready) await loadMeta();
+        setPlaneAspect();
         videoEntity.setAttribute('visible', true);
         await video.play();
         label.textContent = 'Video reproduciéndose';
         playBtn.textContent = 'Pausar video';
-        playBtn.style.display = 'block';
       } catch (e) {
         label.textContent = 'No se pudo reproducir el video';
         console.log(e);
@@ -148,9 +177,10 @@
 
     function stopVideo() {
       video.pause();
+      video.currentTime = 0;
       videoEntity.setAttribute('visible', false);
       playBtn.textContent = 'Reproducir video';
-      label.textContent = 'Video detenido';
+      label.textContent = targetDetected ? 'Obra detectada. Pulsa reproducir' : 'Video detenido';
     }
 
     playBtn.addEventListener('click', async () => {
@@ -163,11 +193,9 @@
 
     target.addEventListener('targetFound', () => {
       targetDetected = true;
-      label.textContent = 'Obra detectada. Pulsa reproducir';
       playBtn.style.display = 'block';
-      if (!userUnlocked) {
-        prepareVideo();
-      }
+      label.textContent = 'Obra detectada. Pulsa reproducir';
+      if (!userUnlocked) unlockVideo();
     });
 
     target.addEventListener('targetLost', () => {
@@ -181,14 +209,10 @@
     });
 
     video.addEventListener('error', () => {
-      label.textContent = 'Error con el archivo de video';
+      label.textContent = 'Error cargando el archivo de video';
     });
 
-    video.addEventListener('loadeddata', () => {
-      if (!targetDetected) {
-        label.textContent = 'Video cargado. Escanea la obra';
-      }
-    });
+    loadMeta();
   </script>
 
 </body>
