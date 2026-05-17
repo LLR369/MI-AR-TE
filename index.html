@@ -7,6 +7,7 @@
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://unpkg.com/aframe-transparent-video-shader@1.0.6/dist/transparent-video-shader.js"></script>
 
   <style>
     html, body {
@@ -17,12 +18,13 @@
       background: #000;
       font-family: Arial, sans-serif;
     }
+
     #label {
       position: fixed;
       left: 50%;
       bottom: 20px;
       transform: translateX(-50%);
-      background: rgba(0,0,0,.7);
+      background: rgba(0,0,0,.72);
       color: #fff;
       padding: 10px 16px;
       border-radius: 999px;
@@ -45,47 +47,49 @@
     <a-assets>
       <video
         id="ar-video"
-        src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm"
         preload="auto"
         playsinline
         webkit-playsinline
         muted
         loop
         crossorigin="anonymous"
-      ></video>
+      >
+        <source src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm" type="video/webm" />
+      </video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <a-video
-        src="#ar-video"
+      <a-entity
+        id="videoPlane"
+        geometry="primitive: plane; width: 1; height: 1"
+        material="shader: transparent-video; src: #ar-video; transparent: true"
         position="0 0 0.01"
-        width="1"
-        height="1"
-      ></a-video>
+      ></a-entity>
     </a-entity>
   </a-scene>
 
   <script>
-    const label = document.getElementById('label');
-    const video = document.getElementById('ar-video');
-    const target = document.getElementById('target');
+    const label = document.getElementById("label");
+    const video = document.getElementById("ar-video");
+    const target = document.getElementById("target");
 
-    target.addEventListener('targetFound', async () => {
-      label.textContent = 'Obra detectada';
+    target.addEventListener("targetFound", async () => {
+      label.textContent = "Obra detectada";
       try {
         video.currentTime = 0;
         await video.play();
+        label.textContent = "Reproduciendo video";
       } catch (e) {
-        label.textContent = 'Detectó la obra pero no reprodujo el video';
+        label.textContent = "Detectó la obra pero no reprodujo el video";
         console.log(e);
       }
     });
 
-    target.addEventListener('targetLost', () => {
-      label.textContent = 'Apunta a la obra';
+    target.addEventListener("targetLost", () => {
       video.pause();
+      label.textContent = "Apunta a la obra";
     });
   </script>
 
