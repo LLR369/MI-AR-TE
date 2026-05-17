@@ -19,71 +19,26 @@
       font-family: Arial, sans-serif;
     }
 
-    #overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.88);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      color: #fff;
-      text-align: center;
-      padding: 24px;
-    }
-
-    #overlay h1 {
-      margin: 0 0 12px 0;
-      font-size: 32px;
-    }
-
-    #overlay p {
-      margin: 0 0 24px 0;
-      max-width: 320px;
-      line-height: 1.5;
-      color: rgba(255,255,255,0.8);
-    }
-
-    #startButton {
-      background: #fff;
-      color: #000;
-      border: 0;
-      border-radius: 999px;
-      padding: 14px 24px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    #hint {
+    #status {
       position: fixed;
       left: 50%;
       bottom: 20px;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
-      color: #fff;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
       padding: 10px 16px;
       border-radius: 999px;
       font-size: 14px;
-      z-index: 9998;
-      display: none;
+      z-index: 9999;
     }
   </style>
 </head>
 <body>
 
-  <div id="overlay">
-    <h1>MI-AR-TE</h1>
-    <p>Presiona el botón, permite la cámara y apunta a la obra para ver el video con transparencia.</p>
-    <button id="startButton">Usar cámara</button>
-  </div>
-
-  <div id="hint">Apunta a la obra</div>
+  <div id="status">Permite la cámara y apunta a la obra</div>
 
   <a-scene
-    embedded
-    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes;"
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
@@ -94,7 +49,6 @@
         id="ar-video"
         src="https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm"
         preload="auto"
-        response-type="arraybuffer"
         playsinline
         webkit-playsinline
         muted
@@ -105,54 +59,34 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0">
+    <a-entity mindar-image-target="targetIndex: 0" id="target">
       <a-video
-        id="videoPlane"
         src="#ar-video"
         position="0 0 0.01"
-        width="1.6"
-        height="0.9"
-        rotation="0 0 0"
+        width="1"
+        height="1"
       ></a-video>
     </a-entity>
   </a-scene>
 
   <script>
-    const overlay = document.getElementById("overlay");
-    const hint = document.getElementById("hint");
-    const startButton = document.getElementById("startButton");
-    const scene = document.querySelector("a-scene");
+    const status = document.getElementById("status");
     const video = document.getElementById("ar-video");
-    const target = document.querySelector('[mindar-image-target="targetIndex: 0"]');
-
-    startButton.addEventListener("click", async () => {
-      overlay.style.display = "none";
-      hint.style.display = "block";
-
-      const startAR = () => {
-        const arSystem = scene.systems["mindar-image-system"];
-        if (arSystem) arSystem.start();
-      };
-
-      if (scene.hasLoaded) {
-        startAR();
-      } else {
-        scene.addEventListener("loaded", startAR, { once: true });
-      }
-    });
+    const target = document.getElementById("target");
 
     target.addEventListener("targetFound", async () => {
-      hint.style.display = "none";
+      status.textContent = "Obra detectada";
       try {
         video.currentTime = 0;
         await video.play();
       } catch (e) {
-        console.log("No se pudo reproducir el video automáticamente:", e);
+        status.textContent = "Obra detectada, pero el video no pudo reproducirse";
+        console.log(e);
       }
     });
 
     target.addEventListener("targetLost", () => {
-      hint.style.display = "block";
+      status.textContent = "Apunta a la obra";
       video.pause();
     });
   </script>
