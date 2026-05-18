@@ -17,8 +17,10 @@
       --label-bg:rgba(0,0,0,.72);
     }
     html,body{margin:0;height:100%;background:transparent;font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
+    /* Mensaje inferior */
     #label{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--label-bg);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;z-index:9998;max-width:90vw;text-align:center;pointer-events:none}
 
+    /* Controles en fila, justo encima del label */
     #controls{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;z-index:10000;pointer-events:auto;transition:opacity .25s,transform .2s;opacity:0;visibility:hidden;transform-origin:center;transform:translateX(-50%) translateY(6px)}
     #controls.visible{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
 
@@ -134,6 +136,12 @@
     const CONTROLS_HIDE_MS = 3500;
     let userStartedAr = false;
 
+    // Double-tap detection state
+    let lastTap = 0;
+    const DOUBLE_TAP_MS = 300;
+    // Force-show timeout handle
+    let forceShowTimeout = null;
+
     // Utility: hide/show all control buttons together (including home)
     function setControlsHiddenWhilePlaying(hidden) {
       const children = [...controls.children];
@@ -183,14 +191,54 @@
       controlsTimeout = setTimeout(()=>controls.classList.remove('visible'), CONTROLS_HIDE_MS);
     }
 
+    // Force show controls (used by double-tap) — shows controls even if hidden by playing state
+    function forceShowControls(duration = 4000) {
+      // Clear any previous forced show
+      if (forceShowTimeout) { clearTimeout(forceShowTimeout); forceShowTimeout = null; }
+      // Remove hidden class from children so they appear
+      const children = [...controls.children];
+      children.forEach(ch => ch.classList.remove('hidden-while-playing'));
+      // Make controls visible
+      controls.classList.add('visible');
+      // After duration, if video is playing, reapply hidden-while-playing; otherwise keep visible
+      forceShowTimeout = setTimeout(() => {
+        if (!arVideo.paused && userStartedAr) {
+          // re-hide visually but keep in DOM
+          setControlsHiddenWhilePlaying(true);
+          controls.classList.remove('visible');
+        } else {
+          // keep visible if not playing
+          controls.classList.add('visible');
+        }
+        forceShowTimeout = null;
+      }, duration);
+    }
+
+    // Double-tap handler (works for click and touchstart)
+    function handleTapEvent(e) {
+      const now = Date.now();
+      if (now - lastTap <= DOUBLE_TAP_MS) {
+        // double tap detected
+        e.preventDefault();
+        // Force show controls for a few seconds
+        forceShowControls(4000);
+        lastTap = 0;
+      } else {
+        // single tap: show controls normally (if scanning)
+        if (scanning) showControlsTemporarily();
+        lastTap = now;
+      }
+    }
+
     // MindAR events
     targetEntity.addEventListener('targetFound', async () => {
       if (!scanning) return;
       videoPlane.setAttribute('visible','true');
-      label.textContent = 'Obra detectada. Toca la pantalla para controles';
-      showControlsTemporarily();
+      label.textContent = 'Obra detectada. Doble tap para mostrar controles';
       // hide controls visually while playing
       setControlsHiddenWhilePlaying(true);
+      // ensure controls element exists in DOM and is hidden visually
+      controls.classList.remove('visible');
       if (userStartedAr && arVideo.paused) {
         try{ await arVideo.play().catch(()=>{}); }catch(e){}
       }
@@ -205,9 +253,9 @@
       try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
     });
 
-    // Show controls on tap
-    document.addEventListener('click', ()=>{ if (scanning) showControlsTemporarily(); }, {passive:true});
-    document.addEventListener('touchstart', ()=>{ if (scanning) showControlsTemporarily(); }, {passive:true});
+    // Attach tap listeners for single/double tap behavior
+    document.addEventListener('click', handleTapEvent, { passive: false });
+    document.addEventListener('touchstart', handleTapEvent, { passive: false });
 
     // 1) Play target (anclado) - audio always on
     playTargetBtn.addEventListener('click', async (ev) => {
@@ -219,11 +267,13 @@
           playTargetBtn.classList.add('active');
           playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
           setControlsHiddenWhilePlaying(true);
+          controls.classList.remove('visible');
         } else {
           arVideo.pause();
           playTargetBtn.classList.remove('active');
           playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
           setControlsHiddenWhilePlaying(false);
+          controls.classList.add('visible');
         }
       } catch (e) { console.warn(e); }
     });
@@ -249,7 +299,6 @@
       homeOverlay.style.display = 'flex';
       label.textContent = 'Escaneo detenido';
       // Reload page to ensure a full clean restart (ensures camera indicator disappears)
-      // small delay to allow streams to stop before reload
       setTimeout(()=>{ location.reload(); }, 250);
     });
 
@@ -273,7 +322,7 @@
         }
       } catch (e) { console.warn(e); }
       label.textContent = 'Apunta la cámara a la obra';
-      // ensure controls are visible in DOM (they will hide visually when playing)
+      // ensure controls are present in DOM (they will hide visually when playing)
       controls.classList.add('visible');
       setControlsHiddenWhilePlaying(false);
     });
