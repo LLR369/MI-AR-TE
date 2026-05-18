@@ -5,131 +5,65 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
   <title>MI-AR-TE - Video AR</title>
 
-  <!-- Google Font Anton -->
   <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
-
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     :root{
-      --btn-inactive-bg: #000000;
-      --btn-active-bg: #B0976D;
-      --btn-icon: #ffffff;
-      --label-bg: rgba(0,0,0,.72);
+      --btn-inactive-bg:#000000;
+      --btn-active-bg:#B0976D;
+      --btn-icon:#ffffff;
+      --label-bg:rgba(0,0,0,.72);
     }
-    html,body { margin:0; height:100%; background:transparent; font-family:Arial,Helvetica,sans-serif; -webkit-tap-highlight-color: transparent; }
-    /* Mensaje inferior */
-    #label { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:var(--label-bg); color:#fff; padding:8px 12px; border-radius:999px; font-size:13px; z-index:9998; max-width:90vw; text-align:center; pointer-events:none; }
-
-    /* Controles en fila, justo encima del label */
-    #controls {
-      position:fixed;
-      left:50%;
-      bottom:90px;
-      transform:translateX(-50%);
-      display:flex;
-      gap:12px;
-      align-items:center;
-      z-index:10000;
-      pointer-events:auto;
-      transition:opacity .25s ease, transform .2s ease;
-      opacity:0;
-      visibility:hidden;
-      transform-origin:center;
-      transform:translateX(-50%) translateY(6px);
-    }
-    #controls.visible { opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
-
-    /* Botones circulares */
-    .ctrl-btn {
-      width:52px;
-      height:52px;
-      border-radius:999px;
-      border:0;
-      background:var(--btn-inactive-bg);
-      color:var(--btn-icon);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 6px 18px rgba(0,0,0,0.35);
-      -webkit-backdrop-filter: blur(6px);
-      backdrop-filter: blur(6px);
-      cursor:pointer;
-    }
-    .ctrl-btn:active { transform:scale(.98); }
-    .ctrl-btn svg { width:22px; height:22px; display:block; fill:currentColor; }
-
-    /* Estado activo */
-    .ctrl-btn.active { background: var(--btn-active-bg); color: var(--btn-icon); }
-
-    /* Overlay de video grande */
-    #videoOverlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:10002; }
-    #videoBox { position:relative; width:min(92vw,900px); max-height:85vh; }
-    #overlayVideo { width:100%; max-height:85vh; display:block; background:#000; border-radius:12px; }
-    #closeBtn { position:absolute; top:-14px; right:-14px; width:40px; height:40px; border:0; border-radius:999px; background:#111; color:#fff; font-size:20px; z-index:2; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-
-    /* Home overlay (pantalla inicial) - color solicitado #666666 */
-    #homeOverlay {
-      position:fixed;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:#666666;
-      color:#ffffff;
-      z-index:10003;
-      padding:24px;
-      box-sizing:border-box;
-    }
-    #homeCard {
-      width:min(920px,94vw);
-      max-height:90vh;
-      overflow:auto;
-      background:transparent;
-      color:#fff;
-      border-radius:12px;
-      padding:28px;
-      box-sizing:border-box;
-      text-align:center;
-    }
-    #homeTitle { font-family: 'Anton', sans-serif; font-size:40px; margin:0 0 8px 0; color:#ffffff; letter-spacing:1px; }
-    #homeSubtitle { font-size:16px; margin:0 0 18px 0; color:#e6e6e6; }
-    .home-links { display:flex; gap:12px; justify-content:center; margin:14px 0 22px 0; flex-wrap:wrap; }
-    .home-link-btn { background:#000; color:#fff; padding:10px 14px; border-radius:8px; text-decoration:none; display:inline-block; font-weight:700; }
-    #startScanBtn { display:inline-block; margin-top:18px; background:#B0976D; color:#fff; padding:14px 20px; border-radius:12px; font-weight:800; font-size:16px; border:0; cursor:pointer; }
-
-    a-scene { width:100%; height:100%; }
+    html,body{margin:0;height:100%;background:transparent;font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
+    #label{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--label-bg);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;z-index:9998;max-width:90vw;text-align:center;pointer-events:none}
+    #controls{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;z-index:10000;pointer-events:auto;transition:opacity .25s,transform .2s;opacity:0;visibility:hidden;transform-origin:center;transform:translateX(-50%) translateY(6px)}
+    #controls.visible{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+    .ctrl-btn{width:52px;height:52px;border-radius:999px;border:0;background:var(--btn-inactive-bg);color:var(--btn-icon);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer}
+    .ctrl-btn:active{transform:scale(.98)}
+    .ctrl-btn svg{width:22px;height:22px;fill:currentColor}
+    .ctrl-btn.active{background:var(--btn-active-bg);color:var(--btn-icon)}
+    #videoOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:10002}
+    #videoBox{position:relative;width:min(92vw,900px);max-height:85vh}
+    #overlayVideo{width:100%;max-height:85vh;background:#000;border-radius:12px}
+    #closeBtn{position:absolute;top:-14px;right:-14px;width:40px;height:40px;border:0;border-radius:999px;background:#111;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    #homeOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#666666;color:#fff;z-index:10003;padding:24px;box-sizing:border-box}
+    #homeCard{width:min(920px,94vw);max-height:90vh;overflow:auto;background:transparent;color:#fff;border-radius:12px;padding:28px;box-sizing:border-box;text-align:center}
+    #homeTitle{font-family:'Anton',sans-serif;font-size:40px;margin:0 0 8px;color:#fff}
+    #homeSubtitle{font-size:16px;margin:0 0 18px;color:#e6e6e6}
+    .home-links{display:flex;gap:12px;justify-content:center;margin:14px 0 22px;flex-wrap:wrap}
+    .home-link-btn{background:#000;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700}
+    #startScanBtn{display:inline-block;margin-top:18px;background:#B0976D;color:#fff;padding:14px 20px;border-radius:12px;font-weight:800;font-size:16px;border:0;cursor:pointer}
+    a-scene{width:100%;height:100%}
   </style>
 </head>
 <body>
 
   <div id="label">Escanea la obra</div>
 
-  <!-- Controles (orden: target play, target audio, home, fixed play, fixed audio) -->
   <div id="controls" aria-hidden="true">
-    <button id="playTargetBtn" class="ctrl-btn" title="Reproducir video anclado" aria-label="Reproducir video anclado">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16l12-8z"/></svg>
+    <button id="playTargetBtn" class="ctrl-btn" title="Reproducir anclado" aria-label="Reproducir anclado">
+      <svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>
     </button>
 
-    <button id="audioTargetBtn" class="ctrl-btn" title="Audio video anclado" aria-label="Audio video anclado">
-      <svg id="audioTargetIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
+    <button id="audioTargetBtn" class="ctrl-btn" title="Audio anclado" aria-label="Audio anclado">
+      <svg id="audioTargetIcon" viewBox="0 0 24 24"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
     </button>
 
     <button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
     </button>
 
-    <button id="playFixedBtn" class="ctrl-btn" title="Ver video fijo" aria-label="Ver video fijo">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    <button id="playFixedBtn" class="ctrl-btn" title="Ver fijo" aria-label="Ver fijo">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
     </button>
 
-    <button id="audioFixedBtn" class="ctrl-btn" title="Audio video fijo" aria-label="Audio video fijo">
-      <svg id="audioFixedIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
+    <button id="audioFixedBtn" class="ctrl-btn" title="Audio fijo" aria-label="Audio fijo">
+      <svg id="audioFixedIcon" viewBox="0 0 24 24"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
     </button>
   </div>
 
-  <!-- Overlay de video grande -->
   <div id="videoOverlay">
     <div id="videoBox">
       <button id="closeBtn" aria-label="Cerrar overlay">×</button>
@@ -137,7 +71,6 @@
     </div>
   </div>
 
-  <!-- Home overlay (pantalla inicial con info y links) -->
   <div id="homeOverlay" role="dialog" aria-modal="true">
     <div id="homeCard">
       <h1 id="homeTitle">MI-AR-TE</h1>
@@ -148,23 +81,16 @@
         <a class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener">Redes del creador</a>
       </div>
 
-      <p style="font-size:13px; color:#ddd; margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
+      <p style="font-size:13px;color:#ddd;margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
 
       <button id="startScanBtn">Iniciar el escaneo</button>
     </div>
   </div>
 
-  <!-- A-Frame scene con MindAR -->
-  <a-scene
-    id="scene"
+  <a-scene id="scene"
     mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
-    color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
-    background="transparent: true"
-    embedded
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-  >
+    color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
+    background="transparent: true" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     <a-assets>
       <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop muted></video>
     </a-assets>
@@ -172,19 +98,12 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <a-plane id="videoPlane"
-               visible="false"
-               position="0 0 0.01"
-               rotation="0 0 0"
-               width="1.2"
-               height="0.675"
-               material="shader: flat; src: #arVideo; side: double; transparent: true;">
-      </a-plane>
+      <a-plane id="videoPlane" visible="false" position="0 0 0.01" rotation="0 0 0" width="1.2" height="0.675"
+        material="shader: flat; src: #arVideo; side: double; transparent: true;"></a-plane>
     </a-entity>
   </a-scene>
 
   <script>
-    // DOM
     const label = document.getElementById('label');
     const controls = document.getElementById('controls');
 
@@ -211,13 +130,12 @@
     const sceneEl = document.getElementById('scene');
     const targetEntity = document.querySelector('[mindar-image-target]');
 
-    // Video URL
     const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
 
-    // Init videos
+    // Inicialización
     arVideo.src = VIDEO_URL;
     arVideo.crossOrigin = "anonymous";
-    arVideo.muted = true; // textura muteada para autoplay
+    arVideo.muted = true;
     arVideo.loop = true;
     arVideo.playsInline = true;
     arVideo.preload = "auto";
@@ -225,332 +143,275 @@
     overlayVideo.crossOrigin = "anonymous";
     overlayVideo.playsInline = true;
     overlayVideo.preload = "metadata";
-    overlayVideo.muted = true; // start muted until user toggles
+    overlayVideo.muted = true;
 
-    // State
-    let targetDetected = false;
+    // Estado
+    let scanning = false;
     let usingCaptureStream = false;
-    let syncInterval = null;
     let controlsTimeout = null;
     const CONTROLS_HIDE_MS = 3500;
-    let userInitiatedArPlay = false;
+    let userStartedAr = false;
 
-    // Helpers: stop and clean streams safely
-    function stopAndReleaseStream(videoEl) {
-      try {
-        const s = videoEl.srcObject;
-        if (s && s.getTracks) {
-          s.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
-        }
-      } catch (e) {}
-      try { videoEl.srcObject = null; } catch(e){}
-    }
-    function stopAllAndReset() {
-      // stop MindAR if running
-      try {
-        const mindarSystem = sceneEl.systems['mindar-image'];
-        if (mindarSystem && typeof mindarSystem.stop === 'function') mindarSystem.stop();
-      } catch(e){}
-      // pause and clear videos/streams
-      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
-      try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
-      stopAndReleaseStream(overlayVideo);
-      usingCaptureStream = false;
-      userInitiatedArPlay = false;
-      // reset UI states
-      playTargetBtn.classList.remove('active');
-      playFixedBtn.classList.remove('active');
-      audioTargetBtn.classList.remove('active');
-      audioFixedBtn.classList.remove('active');
-      setToggleIconForTarget(false);
-      setToggleIconForFixed(false);
-      updateAudioTargetIcon();
-      updateAudioFixedIcon();
-    }
-
-    // Adjust plane to video aspect
-    arVideo.addEventListener('loadedmetadata', () => {
-      const vw = arVideo.videoWidth || 16;
-      const vh = arVideo.videoHeight || 9;
-      const aspect = vw / vh;
-      const baseHeight = 0.675;
-      const newWidth = baseHeight * aspect;
-      videoPlane.setAttribute('width', newWidth);
-      videoPlane.setAttribute('height', baseHeight);
-    });
-
-    // Controls show/hide
-    function showControlsTemporarily() {
-      if (!targetDetected) return;
+    // Helpers
+    function showControls() {
+      if (!scanning) return;
       controls.classList.add('visible');
-      controls.setAttribute('aria-hidden', 'false');
       if (controlsTimeout) clearTimeout(controlsTimeout);
-      controlsTimeout = setTimeout(hideControls, CONTROLS_HIDE_MS);
+      controlsTimeout = setTimeout(()=>controls.classList.remove('visible'), CONTROLS_HIDE_MS);
     }
-    function hideControls() {
-      controls.classList.remove('visible');
-      controls.setAttribute('aria-hidden', 'true');
-      if (controlsTimeout) { clearTimeout(controlsTimeout); controlsTimeout = null; }
+    function stopAndReleaseStream(videoEl){
+      try{
+        const s = videoEl.srcObject;
+        if (s && s.getTracks) s.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} });
+      }catch(e){}
+      try{ videoEl.srcObject = null; }catch(e){}
     }
-    function onUserTap() { if (!targetDetected) return; showControlsTemporarily(); }
-    document.addEventListener('click', onUserTap, { passive: true });
-    document.addEventListener('touchstart', onUserTap, { passive: true });
+    async function stopMindARCamera(){
+      try{
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        if (mindarSystem){
+          if (typeof mindarSystem.stop === 'function') await mindarSystem.stop();
+          // try to stop internal video stream if exposed
+          const internalVideo = mindarSystem.video || mindarSystem.videoEl || mindarSystem._video;
+          if (internalVideo && internalVideo.srcObject){
+            try{ internalVideo.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
+            try{ internalVideo.srcObject = null; }catch(e){}
+          }
+        }
+      }catch(e){ console.warn('stopMindARCamera error', e); }
+      // As extra safety, stop any MediaStream tracks attached to any video elements on page
+      try{
+        document.querySelectorAll('video').forEach(v=>{
+          if (v && v.srcObject && v.srcObject.getTracks){
+            try{ v.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
+            try{ v.srcObject = null; }catch(e){}
+          }
+        });
+      }catch(e){}
+    }
 
-    // MindAR events
-    targetEntity.addEventListener('targetFound', async () => {
-      targetDetected = true;
-      label.textContent = 'Obra detectada. Toca la pantalla para controles';
-      showControlsTemporarily();
-      videoPlane.setAttribute('visible', 'true');
-      try { if (userInitiatedArPlay && arVideo.paused) await arVideo.play().catch(()=>{}); } catch(e){}
-    });
-    targetEntity.addEventListener('targetLost', () => {
-      targetDetected = false;
-      label.textContent = 'Escanea la obra';
-      hideControls();
-      videoPlane.setAttribute('visible', 'false');
-      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
-      try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
-      videoOverlay.style.display = 'none';
-      stopSyncFallback();
-      stopAndReleaseStream(overlayVideo);
-      usingCaptureStream = false;
-    });
-
-    // captureStream helper
-    function enableCaptureStream() {
-      if (typeof arVideo.captureStream === 'function') {
-        try {
-          // ensure arVideo has audio track presence by unmuting only when user requested
-          const stream = arVideo.captureStream();
-          overlayVideo.srcObject = stream;
+    function enableCaptureStream(){
+      if (typeof arVideo.captureStream === 'function'){
+        try{
+          const s = arVideo.captureStream();
+          overlayVideo.srcObject = s;
           usingCaptureStream = true;
           overlayVideo.muted = arVideo.muted;
           return true;
-        } catch (e) {
-          console.warn('captureStream falló:', e);
-          usingCaptureStream = false;
-          return false;
-        }
+        }catch(e){ usingCaptureStream = false; return false; }
       }
       return false;
     }
 
-    // Sync fallback
-    function startSyncFallback() {
-      stopSyncFallback();
-      syncInterval = setInterval(() => {
-        const a = arVideo.currentTime || 0;
-        const b = overlayVideo.currentTime || 0;
-        const diff = Math.abs(a - b);
-        if (diff > 0.25) {
-          try { overlayVideo.currentTime = a; } catch (e) {}
-        }
-        if (arVideo.paused && !overlayVideo.paused) overlayVideo.pause();
-        if (!arVideo.paused && overlayVideo.paused) overlayVideo.play().catch(()=>{});
-      }, 250);
-    }
-    function stopSyncFallback() { if (syncInterval) { clearInterval(syncInterval); syncInterval = null; } }
+    // Ajuste de proporción
+    arVideo.addEventListener('loadedmetadata', ()=>{
+      const vw = arVideo.videoWidth || 16;
+      const vh = arVideo.videoHeight || 9;
+      const aspect = vw / vh;
+      const baseH = 0.675;
+      videoPlane.setAttribute('width', baseH * aspect);
+      videoPlane.setAttribute('height', baseH);
+    });
 
-    // --- Controls behavior ---
+    // MindAR events
+    targetEntity.addEventListener('targetFound', async ()=>{
+      if (!scanning) return;
+      videoPlane.setAttribute('visible','true');
+      label.textContent = 'Obra detectada. Toca la pantalla para controles';
+      showControls();
+      if (userStartedAr && arVideo.paused) { try{ await arVideo.play().catch(()=>{}); }catch(e){} }
+    });
+    targetEntity.addEventListener('targetLost', ()=>{
+      videoPlane.setAttribute('visible','false');
+      label.textContent = 'Escanea la obra';
+      controls.classList.remove('visible');
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      try{ if (!overlayVideo.paused) overlayVideo.pause(); }catch(e){}
+      videoOverlay.style.display = 'none';
+      stopAndReleaseStream(overlayVideo);
+      usingCaptureStream = false;
+    });
 
-    // Play target (anclado)
-    playTargetBtn.addEventListener('click', async (ev) => {
+    // Mostrar controles al tocar
+    document.addEventListener('click', ()=>{ if (scanning) showControls(); }, {passive:true});
+    document.addEventListener('touchstart', ()=>{ if (scanning) showControls(); }, {passive:true});
+
+    // Play target
+    playTargetBtn.addEventListener('click', async (ev)=>{
       ev.stopPropagation();
-      try {
-        if (arVideo.paused) {
+      try{
+        if (arVideo.paused){
           await arVideo.play();
-          userInitiatedArPlay = true;
+          userStartedAr = true;
           playTargetBtn.classList.add('active');
-          setToggleIconForTarget(true);
+          playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
         } else {
           arVideo.pause();
           playTargetBtn.classList.remove('active');
-          setToggleIconForTarget(false);
+          playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
         }
-        showControlsTemporarily();
-      } catch (e) { console.warn('Error playTarget:', e); }
+      }catch(e){ console.warn(e); }
     });
-    function setToggleIconForTarget(isPlaying) {
-      playTargetBtn.innerHTML = isPlaying
-        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
-        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16l12-8z"/></svg>';
-    }
 
-    // Audio target (active = sound ON)
-    audioTargetBtn.addEventListener('click', async (ev) => {
+    // Audio target (active = sonido ON)
+    audioTargetBtn.addEventListener('click', async (ev)=>{
       ev.stopPropagation();
       const wasPlaying = !arVideo.paused;
-      // toggle muted state (active = sound ON)
-      arVideo.muted = !arVideo.muted ? false : true; // flip
-      // reflect UI
+      arVideo.muted = !arVideo.muted;
       if (!arVideo.muted) audioTargetBtn.classList.add('active'); else audioTargetBtn.classList.remove('active');
-      // if using captureStream, recreate stream so overlay reflects audio change
-      if (usingCaptureStream) {
-        try {
-          const currentOverlayPlaying = !overlayVideo.paused;
+      if (usingCaptureStream){
+        try{
+          const overlayWasPlaying = !overlayVideo.paused;
           stopAndReleaseStream(overlayVideo);
-          const stream = arVideo.captureStream();
-          overlayVideo.srcObject = stream;
+          const s = arVideo.captureStream();
+          overlayVideo.srcObject = s;
           overlayVideo.muted = arVideo.muted;
-          if (currentOverlayPlaying) await overlayVideo.play().catch(()=>{});
-        } catch (e) { console.warn('No se pudo recrear captureStream tras toggle audio:', e); }
+          if (overlayWasPlaying) await overlayVideo.play().catch(()=>{});
+        }catch(e){ console.warn(e); }
       }
-      // ensure arVideo keeps playing if it was playing before toggle
-      if (wasPlaying) { try { await arVideo.play().catch(()=>{}); } catch(e){} }
-      updateAudioTargetIcon();
-      showControlsTemporarily();
-    });
-    function updateAudioTargetIcon() {
-      if (arVideo.muted) {
-        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>'; // speaker without waves (muted visual)
-        audioTargetBtn.classList.remove('active');
+      if (wasPlaying) { try{ await arVideo.play().catch(()=>{}); }catch(e){} }
+      // icon: waves when unmuted
+      if (arVideo.muted){
+        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>';
       } else {
-        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>'; // speaker + waves
-        audioTargetBtn.classList.add('active');
+        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>';
       }
-    }
-
-    // Home: stop scanning and stop everything
-    homeBtn.addEventListener('click', async (ev) => {
-      ev.stopPropagation();
-      stopAllAndReset();
-      homeOverlay.style.display = 'flex';
-      hideControls();
     });
 
-    // Start scan from home
-    startScanBtn.addEventListener('click', async () => {
+    // Home: detiene TODO (escaneo, cámara, videos, audio, streams) y muestra pantalla inicial
+    homeBtn.addEventListener('click', async (ev)=>{
+      ev.stopPropagation();
+      // Stop MindAR camera and any streams
+      try{ await stopMindARCamera(); }catch(e){ console.warn(e); }
+      // Pause and clear videos
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      try{ if (!overlayVideo.paused) overlayVideo.pause(); }catch(e){}
+      try{ overlayVideo.src = ''; }catch(e){}
+      stopAndReleaseStream(overlayVideo);
+      // Reset flags and UI
+      scanning = false;
+      usingCaptureStream = false;
+      userStartedAr = false;
+      playTargetBtn.classList.remove('active');
+      playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
+      playFixedBtn.classList.remove('active');
+      playFixedBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+      audioTargetBtn.classList.remove('active');
+      audioFixedBtn.classList.remove('active');
+      // show home overlay
+      homeOverlay.style.display = 'flex';
+      // show home button (allow re-open)
+      homeBtn.style.display = 'inline-flex';
+      // update label
+      label.textContent = 'Escaneo detenido';
+    });
+
+    // Start scan
+    startScanBtn.addEventListener('click', async ()=>{
       homeOverlay.style.display = 'none';
-      try {
+      scanning = true;
+      // hide home button while scanning to avoid accidental stop
+      homeBtn.style.display = 'none';
+      try{
         const mindarSystem = sceneEl.systems['mindar-image'];
-        if (mindarSystem && typeof mindarSystem.start === 'function') {
-          await mindarSystem.start();
-        }
-      } catch (e) { console.warn('No se pudo iniciar MindAR programáticamente:', e); }
+        if (mindarSystem && typeof mindarSystem.start === 'function') await mindarSystem.start();
+      }catch(e){ console.warn(e); }
       label.textContent = 'Apunta la cámara a la obra';
     });
 
     // Play fixed overlay
-    playFixedBtn.addEventListener('click', async (ev) => {
+    playFixedBtn.addEventListener('click', async (ev)=>{
       ev.stopPropagation();
+      try{ if (arVideo.paused) await arVideo.play().catch(()=>{}); }catch(e){}
       const ok = enableCaptureStream();
-      try { if (arVideo.paused) await arVideo.play().catch(()=>{}); } catch(e){}
       videoOverlay.style.display = 'flex';
-      if (ok) {
-        try { await overlayVideo.play(); } catch(e){}
+      if (ok){
+        try{ await overlayVideo.play().catch(()=>{}); }catch(e){}
       } else {
-        const current = arVideo.currentTime || 0;
+        const t = arVideo.currentTime || 0;
         if (!arVideo.paused) arVideo.pause();
         overlayVideo.srcObject = null;
         overlayVideo.src = VIDEO_URL;
-        overlayVideo.currentTime = current;
+        overlayVideo.currentTime = t;
         overlayVideo.muted = true;
         await overlayVideo.play().catch(()=>{});
-        startSyncFallback();
       }
       playFixedBtn.classList.add('active');
-      setToggleIconForFixed(true);
-      showControlsTemporarily();
+      playFixedBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
     });
-    function setToggleIconForFixed(isPlaying) {
-      playFixedBtn.innerHTML = isPlaying
-        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
-        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
-    }
 
-    // Audio fixed (active = sound ON)
-    audioFixedBtn.addEventListener('click', async (ev) => {
+    // Audio fixed
+    audioFixedBtn.addEventListener('click', async (ev)=>{
       ev.stopPropagation();
-      const wasPlayingOverlay = !overlayVideo.paused;
-      if (usingCaptureStream) {
+      const overlayPlaying = !overlayVideo.paused;
+      if (usingCaptureStream){
         arVideo.muted = !arVideo.muted;
-        try {
+        try{
           stopAndReleaseStream(overlayVideo);
-          const stream = arVideo.captureStream();
-          overlayVideo.srcObject = stream;
+          const s = arVideo.captureStream();
+          overlayVideo.srcObject = s;
           overlayVideo.muted = arVideo.muted;
-          if (wasPlayingOverlay) await overlayVideo.play().catch(()=>{});
-        } catch (e) { console.warn('No se pudo recrear captureStream tras toggle audio fixed:', e); }
+          if (overlayPlaying) await overlayVideo.play().catch(()=>{});
+        }catch(e){ console.warn(e); }
         if (!arVideo.muted) audioFixedBtn.classList.add('active'); else audioFixedBtn.classList.remove('active');
       } else {
         overlayVideo.muted = !overlayVideo.muted;
         if (!overlayVideo.muted) audioFixedBtn.classList.add('active'); else audioFixedBtn.classList.remove('active');
       }
-      updateAudioFixedIcon();
-      showControlsTemporarily();
-    });
-    function updateAudioFixedIcon() {
       const muted = usingCaptureStream ? arVideo.muted : overlayVideo.muted;
-      if (muted) {
-        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>'; // muted visual
-        audioFixedBtn.classList.remove('active');
+      if (muted){
+        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>';
       } else {
-        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>'; // speaker + waves
-        audioFixedBtn.classList.add('active');
+        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>';
       }
-    }
+    });
 
     // Close overlay
-    closeBtn.addEventListener('click', async (ev) => {
+    closeBtn.addEventListener('click', async (ev)=>{
       ev.stopPropagation();
-      if (usingCaptureStream) {
+      if (usingCaptureStream){
         overlayVideo.pause();
         videoOverlay.style.display = 'none';
-        stopSyncFallback();
+        stopAndReleaseStream(overlayVideo);
+        usingCaptureStream = false;
         playFixedBtn.classList.remove('active');
-        setToggleIconForFixed(false);
+        playFixedBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
         return;
       }
-      try {
-        const current = overlayVideo.currentTime || 0;
+      try{
+        const t = overlayVideo.currentTime || 0;
         overlayVideo.pause();
         overlayVideo.src = '';
         videoOverlay.style.display = 'none';
-        stopSyncFallback();
-        arVideo.currentTime = current;
-        if (targetDetected) {
-          await arVideo.play().catch(()=>{});
+        arVideo.currentTime = t;
+        if (targetEntity && targetEntity.getAttribute('visible') !== false) {
+          try{ await arVideo.play().catch(()=>{}); }catch(e){}
         }
         playFixedBtn.classList.remove('active');
-        setToggleIconForFixed(false);
-      } catch (e) { console.warn('Error al cerrar overlay:', e); }
+        playFixedBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+      }catch(e){ console.warn(e); }
     });
 
-    // Auto-resume guard: if arVideo pauses unexpectedly while target present and user started playback, try once to resume
+    // Auto-resume guard
     let attemptedAutoResume = false;
-    arVideo.addEventListener('pause', async () => {
-      if (targetDetected && userInitiatedArPlay && !attemptedAutoResume) {
+    arVideo.addEventListener('pause', async ()=>{
+      if (scanning && userStartedAr && !attemptedAutoResume){
         attemptedAutoResume = true;
-        try { await arVideo.play().catch(()=>{}); } catch (e) {}
-        setTimeout(()=>{ attemptedAutoResume = false; }, 1500);
+        try{ await arVideo.play().catch(()=>{}); }catch(e){}
+        setTimeout(()=>attemptedAutoResume=false,1500);
       }
     });
 
-    // Visibility cleanup
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
-        try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
-      }
-    });
-    window.addEventListener('pagehide', () => {
-      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
-      try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
-      stopSyncFallback();
+    // Clean up on pagehide
+    window.addEventListener('pagehide', ()=>{
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      try{ if (!overlayVideo.paused) overlayVideo.pause(); }catch(e){}
+      stopAndReleaseStream(overlayVideo);
     });
 
-    // Errors
-    arVideo.addEventListener('error', (e) => {
-      console.error('Error en arVideo:', e);
-      label.textContent = 'Error cargando el video (textura). Revisa CORS o la URL.';
-    });
-    overlayVideo.addEventListener('error', (e) => {
-      console.error('Error en overlayVideo:', e);
-    });
-
-    // Start with home overlay visible
+    // Start with home visible
     homeOverlay.style.display = 'flex';
+    homeBtn.style.display = 'inline-flex';
   </script>
 
 </body>
