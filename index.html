@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
   <title>MI-AR-TE - Video AR</title>
 
-  <!-- Anton font -->
   <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
-
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -19,10 +17,8 @@
       --label-bg:rgba(0,0,0,.72);
     }
     html,body{margin:0;height:100%;background:transparent;font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
-    /* Mensaje inferior */
     #label{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--label-bg);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;z-index:9998;max-width:90vw;text-align:center;pointer-events:none}
 
-    /* Controles en fila, justo encima del label */
     #controls{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;z-index:10000;pointer-events:auto;transition:opacity .25s,transform .2s;opacity:0;visibility:hidden;transform-origin:center;transform:translateX(-50%) translateY(6px)}
     #controls.visible{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
 
@@ -31,7 +27,7 @@
     .ctrl-btn svg{width:22px;height:22px;fill:currentColor}
     .ctrl-btn.active{background:var(--btn-active-bg);color:var(--btn-icon)}
 
-    /* Ocultado visual para botones (no elimina del DOM ni cambia flujo) */
+    /* Ocultado visual para controles (no elimina del DOM) */
     .hidden-while-playing{opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease}
 
     /* Home overlay (pantalla inicial) */
@@ -50,24 +46,19 @@
 
   <div id="label">Escanea la obra</div>
 
-  <!-- Controles: (1) Play target, (2) Audio target, (3) Home (centro), (4) Play fijo (abre nueva pestaña) -->
+  <!-- Controles: (1) Play target, (2) Home (centro), (3) Play fijo (abre nueva pestaña) -->
   <div id="controls" aria-hidden="true">
     <!-- 1) Play del video anclado al target -->
     <button id="playTargetBtn" class="ctrl-btn" title="Reproducir anclado" aria-label="Reproducir anclado">
       <svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>
     </button>
 
-    <!-- 2) Audio del video anclado -->
-    <button id="audioTargetBtn" class="ctrl-btn" title="Audio anclado" aria-label="Audio anclado">
-      <svg id="audioTargetIcon" viewBox="0 0 24 24"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
-    </button>
-
-    <!-- 3) Home (centro) -->
+    <!-- 2) Home (centro) - actúa como STOP / reinicio -->
     <button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
     </button>
 
-    <!-- 4) Play fijo: abre nueva pestaña con el video -->
+    <!-- 3) Play fijo: abre nueva pestaña con el video -->
     <button id="playFixedBtn" class="ctrl-btn" title="Abrir video fijo en nueva pestaña" aria-label="Abrir video fijo">
       <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
     </button>
@@ -96,7 +87,8 @@
     color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
     background="transparent: true" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     <a-assets>
-      <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop muted></video>
+      <!-- Video textura AR: audio siempre activo -->
+      <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -113,11 +105,7 @@
     const controls = document.getElementById('controls');
 
     const playTargetBtn = document.getElementById('playTargetBtn');
-    const audioTargetBtn = document.getElementById('audioTargetBtn');
-    const audioTargetIcon = document.getElementById('audioTargetIcon');
-
     const homeBtn = document.getElementById('homeBtn');
-
     const playFixedBtn = document.getElementById('playFixedBtn');
 
     const homeOverlay = document.getElementById('homeOverlay');
@@ -132,10 +120,10 @@
     // Video URL
     const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
 
-    // Init
+    // Init: audio always active (no mute)
     arVideo.src = VIDEO_URL;
     arVideo.crossOrigin = "anonymous";
-    arVideo.muted = true; // start muted for autoplay
+    arVideo.muted = false; // audio always on
     arVideo.loop = true;
     arVideo.playsInline = true;
     arVideo.preload = "auto";
@@ -169,7 +157,6 @@
         const mindarSystem = sceneEl.systems['mindar-image'];
         if (mindarSystem){
           if (typeof mindarSystem.stop === 'function') await mindarSystem.stop();
-          // try to stop internal video stream if exposed
           const internalVideo = mindarSystem.video || mindarSystem.videoEl || mindarSystem._video;
           if (internalVideo && internalVideo.srcObject){
             try{ internalVideo.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
@@ -202,15 +189,18 @@
       videoPlane.setAttribute('visible','true');
       label.textContent = 'Obra detectada. Toca la pantalla para controles';
       showControlsTemporarily();
-      // while playing, hide controls visually (including home)
-      setControlsHiddenWhilePlaying(false); // ensure visible initially
+      // hide controls visually while playing
+      setControlsHiddenWhilePlaying(true);
+      if (userStartedAr && arVideo.paused) {
+        try{ await arVideo.play().catch(()=>{}); }catch(e){}
+      }
     });
 
     targetEntity.addEventListener('targetLost', () => {
       videoPlane.setAttribute('visible','false');
       label.textContent = 'Escanea la obra';
       controls.classList.remove('visible');
-      // restore controls visibility
+      // restore controls when target lost
       setControlsHiddenWhilePlaying(false);
       try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
     });
@@ -219,7 +209,7 @@
     document.addEventListener('click', ()=>{ if (scanning) showControlsTemporarily(); }, {passive:true});
     document.addEventListener('touchstart', ()=>{ if (scanning) showControlsTemporarily(); }, {passive:true});
 
-    // 1) Play target (anclado)
+    // 1) Play target (anclado) - audio always on
     playTargetBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       try {
@@ -228,58 +218,42 @@
           userStartedAr = true;
           playTargetBtn.classList.add('active');
           playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-          // hide all controls visually while playing
           setControlsHiddenWhilePlaying(true);
         } else {
           arVideo.pause();
           playTargetBtn.classList.remove('active');
           playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
-          // restore controls
           setControlsHiddenWhilePlaying(false);
         }
       } catch (e) { console.warn(e); }
     });
 
-    // 2) Audio target (activo = sonido ON)
-    audioTargetBtn.addEventListener('click', async (ev) => {
-      ev.stopPropagation();
-      const wasPlaying = !arVideo.paused;
-      arVideo.muted = !arVideo.muted; // flip
-      if (!arVideo.muted) audioTargetBtn.classList.add('active'); else audioTargetBtn.classList.remove('active');
-      if (wasPlaying) { try { await arVideo.play().catch(()=>{}); } catch(e){} }
-      // icono: ondas cuando está desmutado
-      if (arVideo.muted) {
-        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>';
-      } else {
-        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>';
-      }
-    });
-
-    // 3) Home: reinicia la app (stop total) y muestra pantalla inicial
+    // 2) Home: STOP total, reinicia la app y vuelve a inicio
     homeBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       // Stop MindAR camera and any streams
       try{ await stopMindARCamera(); }catch(e){ console.warn(e); }
-      // Pause and clear videos
+      // Pause and clear AR video
       try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      try{ arVideo.src = ''; }catch(e){}
+      stopAndReleaseStream(arVideo);
       // Reset UI and flags
       scanning = false;
       userStartedAr = false;
       playTargetBtn.classList.remove('active');
       playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
-      audioTargetBtn.classList.remove('active');
-      audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>';
-      // Ensure controls visible state reset
-      controls.classList.remove('visible');
+      // Restore controls visible
       setControlsHiddenWhilePlaying(false);
-      // Show home overlay and ensure nothing runs until user presses Iniciar el escaneo
+      controls.classList.remove('visible');
+      // Show home overlay (inicio) and ensure nothing runs until Start Scan
       homeOverlay.style.display = 'flex';
       label.textContent = 'Escaneo detenido';
-      // As final safety, reload the page to ensure a clean state (commented out by default)
-      // location.reload();
+      // Reload page to ensure a full clean restart (ensures camera indicator disappears)
+      // small delay to allow streams to stop before reload
+      setTimeout(()=>{ location.reload(); }, 250);
     });
 
-    // 4) Play fijo: abre nueva pestaña con el video fijo (sin overlay)
+    // 3) Play fijo: abre nueva pestaña con el video fijo
     playFixedBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
       try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
@@ -292,7 +266,6 @@
     startScanBtn.addEventListener('click', async () => {
       homeOverlay.style.display = 'none';
       scanning = true;
-      // show controls only when target found or on tap
       try {
         const mindarSystem = sceneEl.systems['mindar-image'];
         if (mindarSystem && typeof mindarSystem.start === 'function') {
@@ -300,11 +273,12 @@
         }
       } catch (e) { console.warn(e); }
       label.textContent = 'Apunta la cámara a la obra';
-      // ensure controls are visible in DOM but not hidden by playing class
+      // ensure controls are visible in DOM (they will hide visually when playing)
+      controls.classList.add('visible');
       setControlsHiddenWhilePlaying(false);
     });
 
-    // Auto-resume guard: intenta reanudar si se pausa inesperadamente
+    // Auto-resume guard
     let attemptedAutoResume = false;
     arVideo.addEventListener('pause', async () => {
       if (scanning && userStartedAr && !attemptedAutoResume) {
