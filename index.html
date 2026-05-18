@@ -26,7 +26,7 @@
     #controls {
       position:fixed;
       left:50%;
-      bottom:90px; /* encima del label */
+      bottom:90px;
       transform:translateX(-50%);
       display:flex;
       gap:12px;
@@ -93,76 +93,37 @@
       box-sizing:border-box;
       text-align:center;
     }
-    #homeTitle {
-      font-family: 'Anton', sans-serif;
-      font-size:40px;
-      margin:0 0 8px 0;
-      color:#ffffff;
-      letter-spacing:1px;
-    }
-    #homeSubtitle {
-      font-size:16px;
-      margin:0 0 18px 0;
-      color:#e6e6e6;
-    }
+    #homeTitle { font-family: 'Anton', sans-serif; font-size:40px; margin:0 0 8px 0; color:#ffffff; letter-spacing:1px; }
+    #homeSubtitle { font-size:16px; margin:0 0 18px 0; color:#e6e6e6; }
     .home-links { display:flex; gap:12px; justify-content:center; margin:14px 0 22px 0; flex-wrap:wrap; }
-    .home-link-btn {
-      background:#000;
-      color:#fff;
-      padding:10px 14px;
-      border-radius:8px;
-      text-decoration:none;
-      display:inline-block;
-      font-weight:700;
-    }
-    #startScanBtn {
-      display:inline-block;
-      margin-top:18px;
-      background:#B0976D;
-      color:#fff;
-      padding:14px 20px;
-      border-radius:12px;
-      font-weight:800;
-      font-size:16px;
-      border:0;
-      cursor:pointer;
-    }
+    .home-link-btn { background:#000; color:#fff; padding:10px 14px; border-radius:8px; text-decoration:none; display:inline-block; font-weight:700; }
+    #startScanBtn { display:inline-block; margin-top:18px; background:#B0976D; color:#fff; padding:14px 20px; border-radius:12px; font-weight:800; font-size:16px; border:0; cursor:pointer; }
 
-    /* A-Frame scene full */
     a-scene { width:100%; height:100%; }
-
-    /* Small helper for hidden elements on target lost */
-    .hidden { display:none !important; }
   </style>
 </head>
 <body>
 
-  <!-- Mensaje inferior -->
   <div id="label">Escanea la obra</div>
 
   <!-- Controles (orden: target play, target audio, home, fixed play, fixed audio) -->
   <div id="controls" aria-hidden="true">
-    <!-- 1) Play del video anclado al target (sigue movimiento) -->
     <button id="playTargetBtn" class="ctrl-btn" title="Reproducir video anclado" aria-label="Reproducir video anclado">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16l12-8z"/></svg>
     </button>
 
-    <!-- 2) Audio del video anclado -->
     <button id="audioTargetBtn" class="ctrl-btn" title="Audio video anclado" aria-label="Audio video anclado">
       <svg id="audioTargetIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
     </button>
 
-    <!-- 3) Botón Home (casita) -->
     <button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
     </button>
 
-    <!-- 4) Play del video fijo (overlay grande) -->
     <button id="playFixedBtn" class="ctrl-btn" title="Ver video fijo" aria-label="Ver video fijo">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
     </button>
 
-    <!-- 5) Audio del video fijo -->
     <button id="audioFixedBtn" class="ctrl-btn" title="Audio video fijo" aria-label="Audio video fijo">
       <svg id="audioFixedIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v6h4l5 5V4L9 9H5z"/></svg>
     </button>
@@ -205,13 +166,11 @@
     device-orientation-permission-ui="enabled: false"
   >
     <a-assets>
-      <!-- Video maestro (textura AR). Debe permitir CORS -->
       <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop muted></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Target: plano frontal en Z; visible controlado por JS -->
     <a-entity id="target" mindar-image-target="targetIndex: 0">
       <a-plane id="videoPlane"
                visible="false"
@@ -225,7 +184,7 @@
   </a-scene>
 
   <script>
-    // DOM references
+    // DOM
     const label = document.getElementById('label');
     const controls = document.getElementById('controls');
 
@@ -274,7 +233,40 @@
     let syncInterval = null;
     let controlsTimeout = null;
     const CONTROLS_HIDE_MS = 3500;
-    let userInitiatedArPlay = false; // track if user intentionally started arVideo
+    let userInitiatedArPlay = false;
+
+    // Helpers: stop and clean streams safely
+    function stopAndReleaseStream(videoEl) {
+      try {
+        const s = videoEl.srcObject;
+        if (s && s.getTracks) {
+          s.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
+        }
+      } catch (e) {}
+      try { videoEl.srcObject = null; } catch(e){}
+    }
+    function stopAllAndReset() {
+      // stop MindAR if running
+      try {
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        if (mindarSystem && typeof mindarSystem.stop === 'function') mindarSystem.stop();
+      } catch(e){}
+      // pause and clear videos/streams
+      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
+      try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
+      stopAndReleaseStream(overlayVideo);
+      usingCaptureStream = false;
+      userInitiatedArPlay = false;
+      // reset UI states
+      playTargetBtn.classList.remove('active');
+      playFixedBtn.classList.remove('active');
+      audioTargetBtn.classList.remove('active');
+      audioFixedBtn.classList.remove('active');
+      setToggleIconForTarget(false);
+      setToggleIconForFixed(false);
+      updateAudioTargetIcon();
+      updateAudioFixedIcon();
+    }
 
     // Adjust plane to video aspect
     arVideo.addEventListener('loadedmetadata', () => {
@@ -300,48 +292,36 @@
       controls.setAttribute('aria-hidden', 'true');
       if (controlsTimeout) { clearTimeout(controlsTimeout); controlsTimeout = null; }
     }
-
-    // Show controls on tap only when target detected
-    function onUserTap() {
-      if (!targetDetected) return;
-      showControlsTemporarily();
-    }
+    function onUserTap() { if (!targetDetected) return; showControlsTemporarily(); }
     document.addEventListener('click', onUserTap, { passive: true });
     document.addEventListener('touchstart', onUserTap, { passive: true });
 
-    // MindAR target events
+    // MindAR events
     targetEntity.addEventListener('targetFound', async () => {
       targetDetected = true;
       label.textContent = 'Obra detectada. Toca la pantalla para controles';
       showControlsTemporarily();
       videoPlane.setAttribute('visible', 'true');
-      // try to play texture if user already initiated or browser allows
-      try {
-        if (userInitiatedArPlay && arVideo.paused) {
-          await arVideo.play().catch(()=>{});
-        }
-      } catch(e){}
+      try { if (userInitiatedArPlay && arVideo.paused) await arVideo.play().catch(()=>{}); } catch(e){}
     });
-
     targetEntity.addEventListener('targetLost', () => {
       targetDetected = false;
       label.textContent = 'Escanea la obra';
       hideControls();
       videoPlane.setAttribute('visible', 'false');
-      if (!arVideo.paused) arVideo.pause();
-      if (!overlayVideo.paused) overlayVideo.pause();
+      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
+      try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
       videoOverlay.style.display = 'none';
       stopSyncFallback();
-      if (usingCaptureStream) {
-        overlayVideo.srcObject = null;
-        usingCaptureStream = false;
-      }
+      stopAndReleaseStream(overlayVideo);
+      usingCaptureStream = false;
     });
 
     // captureStream helper
     function enableCaptureStream() {
       if (typeof arVideo.captureStream === 'function') {
         try {
+          // ensure arVideo has audio track presence by unmuting only when user requested
           const stream = arVideo.captureStream();
           overlayVideo.srcObject = stream;
           usingCaptureStream = true;
@@ -370,13 +350,11 @@
         if (!arVideo.paused && overlayVideo.paused) overlayVideo.play().catch(()=>{});
       }, 250);
     }
-    function stopSyncFallback() {
-      if (syncInterval) { clearInterval(syncInterval); syncInterval = null; }
-    }
+    function stopSyncFallback() { if (syncInterval) { clearInterval(syncInterval); syncInterval = null; } }
 
     // --- Controls behavior ---
 
-    // 1) Play target (anclado)
+    // Play target (anclado)
     playTargetBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       try {
@@ -391,74 +369,57 @@
           setToggleIconForTarget(false);
         }
         showControlsTemporarily();
-      } catch (e) {
-        console.warn('Error playTarget:', e);
-      }
+      } catch (e) { console.warn('Error playTarget:', e); }
     });
-
     function setToggleIconForTarget(isPlaying) {
-      if (isPlaying) {
-        playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-      } else {
-        playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16l12-8z"/></svg>';
-      }
+      playTargetBtn.innerHTML = isPlaying
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16l12-8z"/></svg>';
     }
 
-    // 2) Audio target (controls arVideo.muted). Active = sound ON
+    // Audio target (active = sound ON)
     audioTargetBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      arVideo.muted = !arVideo.muted;
+      const wasPlaying = !arVideo.paused;
+      // toggle muted state (active = sound ON)
+      arVideo.muted = !arVideo.muted ? false : true; // flip
+      // reflect UI
       if (!arVideo.muted) audioTargetBtn.classList.add('active'); else audioTargetBtn.classList.remove('active');
       // if using captureStream, recreate stream so overlay reflects audio change
       if (usingCaptureStream) {
         try {
-          overlayVideo.pause();
-          overlayVideo.srcObject = null;
+          const currentOverlayPlaying = !overlayVideo.paused;
+          stopAndReleaseStream(overlayVideo);
           const stream = arVideo.captureStream();
           overlayVideo.srcObject = stream;
           overlayVideo.muted = arVideo.muted;
-          if (!overlayVideo.paused) await overlayVideo.play().catch(()=>{});
-        } catch (e) {
-          console.warn('No se pudo recrear captureStream tras toggle audio:', e);
-        }
+          if (currentOverlayPlaying) await overlayVideo.play().catch(()=>{});
+        } catch (e) { console.warn('No se pudo recrear captureStream tras toggle audio:', e); }
       }
+      // ensure arVideo keeps playing if it was playing before toggle
+      if (wasPlaying) { try { await arVideo.play().catch(()=>{}); } catch(e){} }
       updateAudioTargetIcon();
       showControlsTemporarily();
     });
-
     function updateAudioTargetIcon() {
-      // active = sound ON
       if (arVideo.muted) {
-        audioTargetIcon.innerHTML = '<path d="M16.5 12c0-1.77-.77-3.37-1.98-4.47l1.42-1.42C18.07 7.9 19 9.86 19 12s-.93 4.1-2.06 5.89l-1.42-1.42C15.73 15.37 16.5 13.77 16.5 12zM5 9v6h4l5 5V4L9 9H5z"/>'; // muted icon (visual)
+        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>'; // speaker without waves (muted visual)
         audioTargetBtn.classList.remove('active');
       } else {
-        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>'; // sound icon
+        audioTargetIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>'; // speaker + waves
         audioTargetBtn.classList.add('active');
       }
     }
 
-    // 3) Home button: open home overlay and stop scanning + pause videos
+    // Home: stop scanning and stop everything
     homeBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      // stop MindAR scanning if running
-      try {
-        const mindarSystem = sceneEl.systems['mindar-image'];
-        if (mindarSystem && typeof mindarSystem.stop === 'function') {
-          await mindarSystem.stop();
-        }
-      } catch (e) {
-        console.warn('No se pudo detener MindAR programáticamente:', e);
-      }
-      // pause videos and close overlay
-      if (!arVideo.paused) arVideo.pause();
-      if (!overlayVideo.paused) overlayVideo.pause();
-      videoOverlay.style.display = 'none';
-      // show home overlay
+      stopAllAndReset();
       homeOverlay.style.display = 'flex';
       hideControls();
     });
 
-    // Start scan from home overlay
+    // Start scan from home
     startScanBtn.addEventListener('click', async () => {
       homeOverlay.style.display = 'none';
       try {
@@ -466,13 +427,11 @@
         if (mindarSystem && typeof mindarSystem.start === 'function') {
           await mindarSystem.start();
         }
-      } catch (e) {
-        console.warn('No se pudo iniciar MindAR programáticamente:', e);
-      }
+      } catch (e) { console.warn('No se pudo iniciar MindAR programáticamente:', e); }
       label.textContent = 'Apunta la cámara a la obra';
     });
 
-    // 4) Play fixed (overlay) - opens big overlay and plays
+    // Play fixed overlay
     playFixedBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       const ok = enableCaptureStream();
@@ -494,30 +453,25 @@
       setToggleIconForFixed(true);
       showControlsTemporarily();
     });
-
     function setToggleIconForFixed(isPlaying) {
-      if (isPlaying) {
-        playFixedBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-      } else {
-        playFixedBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
-      }
+      playFixedBtn.innerHTML = isPlaying
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
     }
 
-    // 5) Audio fixed (controls overlayVideo.muted or arVideo.muted if captureStream). Active = sound ON
+    // Audio fixed (active = sound ON)
     audioFixedBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
+      const wasPlayingOverlay = !overlayVideo.paused;
       if (usingCaptureStream) {
         arVideo.muted = !arVideo.muted;
         try {
-          overlayVideo.pause();
-          overlayVideo.srcObject = null;
+          stopAndReleaseStream(overlayVideo);
           const stream = arVideo.captureStream();
           overlayVideo.srcObject = stream;
           overlayVideo.muted = arVideo.muted;
-          if (!overlayVideo.paused) await overlayVideo.play().catch(()=>{});
-        } catch (e) {
-          console.warn('No se pudo recrear captureStream tras toggle audio fixed:', e);
-        }
+          if (wasPlayingOverlay) await overlayVideo.play().catch(()=>{});
+        } catch (e) { console.warn('No se pudo recrear captureStream tras toggle audio fixed:', e); }
         if (!arVideo.muted) audioFixedBtn.classList.add('active'); else audioFixedBtn.classList.remove('active');
       } else {
         overlayVideo.muted = !overlayVideo.muted;
@@ -526,14 +480,13 @@
       updateAudioFixedIcon();
       showControlsTemporarily();
     });
-
     function updateAudioFixedIcon() {
       const muted = usingCaptureStream ? arVideo.muted : overlayVideo.muted;
       if (muted) {
-        audioFixedIcon.innerHTML = '<path d="M16.5 12c0-1.77-.77-3.37-1.98-4.47l1.42-1.42C18.07 7.9 19 9.86 19 12s-.93 4.1-2.06 5.89l-1.42-1.42C15.73 15.37 16.5 13.77 16.5 12zM5 9v6h4l5 5V4L9 9H5z"/>';
+        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>'; // muted visual
         audioFixedBtn.classList.remove('active');
       } else {
-        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/>';
+        audioFixedIcon.innerHTML = '<path d="M5 9v6h4l5 5V4L9 9H5z"/><path d="M16.5 12c0 1.77-.77 3.37-1.98 4.47l1.42 1.42C18.07 16.1 19 14.14 19 12s-.93-4.1-2.06-5.89l-1.42 1.42C15.73 8.63 16.5 10.23 16.5 12z"/>'; // speaker + waves
         audioFixedBtn.classList.add('active');
       }
     }
@@ -561,32 +514,15 @@
         }
         playFixedBtn.classList.remove('active');
         setToggleIconForFixed(false);
-      } catch (e) {
-        console.warn('Error al cerrar overlay:', e);
-      }
+      } catch (e) { console.warn('Error al cerrar overlay:', e); }
     });
 
-    // Initialize icons/states
-    setToggleIconForTarget(false);
-    setToggleIconForFixed(false);
-    updateAudioTargetIcon();
-    updateAudioFixedIcon();
-
-    // First user gesture unlock (no auto-unmute)
-    function firstUserGesture() { document.removeEventListener('click', firstUserGesture); }
-    document.addEventListener('click', firstUserGesture);
-
-    // If arVideo pauses unexpectedly while target is present and user previously started it, try to resume once
+    // Auto-resume guard: if arVideo pauses unexpectedly while target present and user started playback, try once to resume
     let attemptedAutoResume = false;
     arVideo.addEventListener('pause', async () => {
       if (targetDetected && userInitiatedArPlay && !attemptedAutoResume) {
         attemptedAutoResume = true;
-        try {
-          await arVideo.play().catch(()=>{});
-        } catch (e) {
-          // ignore
-        }
-        // reset after short delay so we don't loop
+        try { await arVideo.play().catch(()=>{}); } catch (e) {}
         setTimeout(()=>{ attemptedAutoResume = false; }, 1500);
       }
     });
@@ -594,13 +530,13 @@
     // Visibility cleanup
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        if (!arVideo.paused) arVideo.pause();
-        if (!overlayVideo.paused) overlayVideo.pause();
+        try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
+        try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
       }
     });
     window.addEventListener('pagehide', () => {
-      if (!arVideo.paused) arVideo.pause();
-      if (!overlayVideo.paused) overlayVideo.pause();
+      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
+      try { if (!overlayVideo.paused) overlayVideo.pause(); } catch(e){}
       stopSyncFallback();
     });
 
@@ -613,7 +549,7 @@
       console.error('Error en overlayVideo:', e);
     });
 
-    // Start with home overlay visible (initial screen)
+    // Start with home overlay visible
     homeOverlay.style.display = 'flex';
   </script>
 
