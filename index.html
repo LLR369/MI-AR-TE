@@ -38,7 +38,7 @@
     #homeTitle{font-family:'Anton',sans-serif;font-size:40px;margin:0 0 8px;color:#fff}
     #homeSubtitle{font-size:16px;margin:0 0 18px;color:#e6e6e6}
     .home-links{display:flex;gap:12px;justify-content:center;margin:14px 0 22px;flex-wrap:wrap}
-    .home-link-btn{background:#000;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700}
+    .home-link-btn{background:#000;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
     .home-link-btn:hover{background:#B0976D;color:#fff}
     #startScanBtn{display:inline-block;margin-top:18px;background:#B0976D;color:#fff;padding:14px 20px;border-radius:12px;font-weight:800;font-size:16px;border:0;cursor:pointer}
 
@@ -74,8 +74,9 @@
       <p id="homeSubtitle">Un desarrollo de AR creado por Leonardo Lumbreras Rodríguez para las obras del mismo</p>
 
       <div class="home-links">
-        <a class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener noreferrer">Desarrolladora</a>
-        <a class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener noreferrer">Redes del creador</a>
+        <!-- Enlaces: abren en nueva pestaña; onclick fallback para móviles -->
+        <a id="linkDev" class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener noreferrer">Desarrolladora</a>
+        <a id="linkRedes" class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener noreferrer">Redes del creador</a>
       </div>
 
       <p style="font-size:13px;color:#ddd;margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
@@ -115,6 +116,8 @@
     const videoPlane = document.getElementById('videoPlane');
     const sceneEl = document.getElementById('scene');
     const targetEntity = document.querySelector('[mindar-image-target]');
+    const linkDev = document.getElementById('linkDev');
+    const linkRedes = document.getElementById('linkRedes');
 
     // Video URL
     const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
@@ -331,6 +334,26 @@
       try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
       stopAndReleaseStream(arVideo);
     });
+
+    // Ensure links open in new tab on all devices (fallback)
+    function safeOpen(url) {
+      try {
+        const w = window.open(url, '_blank', 'noopener');
+        if (!w) {
+          // popup blocked — navigate in same tab as fallback
+          window.location.href = url;
+        }
+      } catch (e) {
+        window.location.href = url;
+      }
+    }
+    linkDev.addEventListener('click', (e) => { /* default anchor will open, but ensure fallback */ });
+    linkRedes.addEventListener('click', (e) => { /* default anchor will open, but ensure fallback */ });
+
+    // For some mobile browsers where anchor target=_blank may be blocked inside overlays,
+    // also attach touchend to explicitly open via window.open as a robust fallback.
+    linkDev.addEventListener('touchend', (e) => { e.preventDefault(); safeOpen(linkDev.href); });
+    linkRedes.addEventListener('touchend', (e) => { e.preventDefault(); safeOpen(linkRedes.href); });
 
     // Start with home overlay visible and controls hidden; nothing runs until Start Scan
     homeOverlay.style.display = 'flex';
