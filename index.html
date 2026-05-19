@@ -39,6 +39,7 @@
     #homeSubtitle{font-size:16px;margin:0 0 18px;color:#e6e6e6}
     .home-links{display:flex;gap:12px;justify-content:center;margin:14px 0 22px;flex-wrap:wrap}
     .home-link-btn{background:#000;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700}
+    .home-link-btn:hover{background:#B0976D;color:#fff}
     #startScanBtn{display:inline-block;margin-top:18px;background:#B0976D;color:#fff;padding:14px 20px;border-radius:12px;font-weight:800;font-size:16px;border:0;cursor:pointer}
 
     a-scene{width:100%;height:100%}
@@ -73,8 +74,8 @@
       <p id="homeSubtitle">Un desarrollo de AR creado por Leonardo Lumbreras Rodríguez para las obras del mismo</p>
 
       <div class="home-links">
-        <a class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener">Desarrolladora</a>
-        <a class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener">Redes del creador</a>
+        <a class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener noreferrer">Desarrolladora</a>
+        <a class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener noreferrer">Redes del creador</a>
       </div>
 
       <p style="font-size:13px;color:#ddd;margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
@@ -102,27 +103,23 @@
   </a-scene>
 
   <script>
-    // DOM
+    // DOM references
     const label = document.getElementById('label');
     const controls = document.getElementById('controls');
-
     const playTargetBtn = document.getElementById('playTargetBtn');
     const homeBtn = document.getElementById('homeBtn');
     const playFixedBtn = document.getElementById('playFixedBtn');
-
     const homeOverlay = document.getElementById('homeOverlay');
     const startScanBtn = document.getElementById('startScanBtn');
-
     const arVideo = document.getElementById('arVideo');
     const videoPlane = document.getElementById('videoPlane');
-
     const sceneEl = document.getElementById('scene');
     const targetEntity = document.querySelector('[mindar-image-target]');
 
     // Video URL
     const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
 
-    // Init: audio always active (no mute)
+    // Initialize AR video (audio always active)
     arVideo.src = VIDEO_URL;
     arVideo.crossOrigin = "anonymous";
     arVideo.muted = false; // audio always on
@@ -132,15 +129,12 @@
 
     // State
     let scanning = false;
-    let controlsTimeout = null;
-    const CONTROLS_HIDE_MS = 3500;
     let userStartedAr = false;
-
-    // Double-tap detection state
     let lastTap = 0;
     const DOUBLE_TAP_MS = 300;
-    // Force-show timeout handle
     let forceShowTimeout = null;
+    let controlsTimeout = null;
+    const CONTROLS_HIDE_MS = 3500;
 
     // Utility: hide/show all control buttons together (including home)
     function setControlsHiddenWhilePlaying(hidden) {
@@ -183,7 +177,7 @@
       }catch(e){}
     }
 
-    // Controls show/hide
+    // Controls show/hide helpers
     function showControlsTemporarily() {
       if (!scanning) return;
       controls.classList.add('visible');
@@ -193,21 +187,18 @@
 
     // Force show controls (used by double-tap) — shows controls even if hidden by playing state
     function forceShowControls(duration = 4000) {
-      // Clear any previous forced show
       if (forceShowTimeout) { clearTimeout(forceShowTimeout); forceShowTimeout = null; }
       // Remove hidden class from children so they appear
       const children = [...controls.children];
       children.forEach(ch => ch.classList.remove('hidden-while-playing'));
       // Make controls visible
       controls.classList.add('visible');
-      // After duration, if video is playing, reapply hidden-while-playing; otherwise keep visible
+      // After duration, reapply hidden state if video is playing
       forceShowTimeout = setTimeout(() => {
         if (!arVideo.paused && userStartedAr) {
-          // re-hide visually but keep in DOM
           setControlsHiddenWhilePlaying(true);
           controls.classList.remove('visible');
         } else {
-          // keep visible if not playing
           controls.classList.add('visible');
         }
         forceShowTimeout = null;
@@ -220,7 +211,6 @@
       if (now - lastTap <= DOUBLE_TAP_MS) {
         // double tap detected
         e.preventDefault();
-        // Force show controls for a few seconds
         forceShowControls(4000);
         lastTap = 0;
       } else {
@@ -237,7 +227,6 @@
       label.textContent = 'Obra detectada. Doble tap para mostrar controles';
       // hide controls visually while playing
       setControlsHiddenWhilePlaying(true);
-      // ensure controls element exists in DOM and is hidden visually
       controls.classList.remove('visible');
       if (userStartedAr && arVideo.paused) {
         try{ await arVideo.play().catch(()=>{}); }catch(e){}
