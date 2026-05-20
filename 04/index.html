@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <title>MI-AR-TE - Video AR</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    :root{
+      --btn-inactive-bg:#000000;
+      --btn-active-bg:#B0976D;
+      --btn-icon:#ffffff;
+      --label-bg:rgba(0,0,0,.72);
+    }
+    html,body{margin:0;height:100%;background:transparent;font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
+    #label{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--label-bg);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;z-index:9998;max-width:90vw;text-align:center;pointer-events:none}
+    #controls{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;z-index:10000;pointer-events:auto;transition:opacity .25s,transform .2s;opacity:0;visibility:hidden;transform-origin:center;transform:translateX(-50%) translateY(6px)}
+    #controls.visible{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+    .ctrl-btn{width:52px;height:52px;border-radius:999px;border:0;background:var(--btn-inactive-bg);color:var(--btn-icon);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer}
+    .ctrl-btn:active{transform:scale(.98)}
+    .ctrl-btn svg{width:22px;height:22px;fill:currentColor}
+    .ctrl-btn.active{background:var(--btn-active-bg);color:var(--btn-icon)}
+    .hidden-while-playing{opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease}
+    #homeOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#666666;color:#fff;z-index:10003;padding:24px;box-sizing:border-box}
+    #homeCard{width:min(920px,94vw);max-height:90vh;overflow:auto;background:transparent;color:#fff;border-radius:12px;padding:28px;box-sizing:border-box;text-align:center}
+    #homeTitle{font-family:'Anton',sans-serif;font-size:40px;margin:0 0 8px;color:#fff}
+    #homeSubtitle{font-size:16px;margin:0 0 18px;color:#e6e6e6}
+    .home-links{display:flex;gap:12px;justify-content:center;margin:14px 0 22px;flex-wrap:wrap}
+    .home-link-btn{background:#000;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+    .home-link-btn:hover{background:#B0976D;color:#fff}
+    #startScanBtn{display:inline-block;margin-top:18px;background:#B0976D;color:#fff;padding:14px 20px;border-radius:12px;font-weight:800;font-size:16px;border:0;cursor:pointer}
+    a-scene{width:100%;height:100%}
+  </style>
+</head>
+<body>
+
+  <div id="label">Escanea la obra</div>
+
+  <div id="controls" aria-hidden="true">
+    <button id="playTargetBtn" class="ctrl-btn" title="Reproducir anclado" aria-label="Reproducir anclado">
+      <svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>
+    </button>
+
+    <button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    </button>
+
+    <button id="playFixedBtn" class="ctrl-btn" title="Abrir video fijo en nueva pestaña" aria-label="Abrir video fijo">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+
+  <div id="homeOverlay" role="dialog" aria-modal="true">
+    <div id="homeCard">
+      <h1 id="homeTitle">MI-AR-TE</h1>
+      <p id="homeSubtitle">Un desarrollo de AR creado por Leonardo Lumbreras Rodríguez para las obras del mismo</p>
+
+      <div class="home-links">
+        <a id="linkDev" class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener noreferrer">Desarrolladora</a>
+        <a id="linkRedes" class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener noreferrer">Redes del creador</a>
+      </div>
+
+      <p style="font-size:13px;color:#ddd;margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
+
+      <button id="startScanBtn">Iniciar el escaneo</button>
+    </div>
+  </div>
+
+  <a-scene id="scene"
+    mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
+    color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
+    background="transparent: true" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-assets>
+      <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop></video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+      <a-plane id="videoPlane" visible="false" position="0 0 0.01" rotation="0 0 0" width="1.2" height="0.675"
+        material="shader: flat; src: #arVideo; side: double; transparent: true;"></a-plane>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const label = document.getElementById('label');
+    const controls = document.getElementById('controls');
+    const playTargetBtn = document.getElementById('playTargetBtn');
+    const homeBtn = document.getElementById('homeBtn');
+    const playFixedBtn = document.getElementById('playFixedBtn');
+    const homeOverlay = document.getElementById('homeOverlay');
+    const startScanBtn = document.getElementById('startScanBtn');
+    const arVideo = document.getElementById('arVideo');
+    const videoPlane = document.getElementById('videoPlane');
+    const sceneEl = document.getElementById('scene');
+    const targetEntity = document.querySelector('[mindar-image-target]');
+    const linkDev = document.getElementById('linkDev');
+    const linkRedes = document.getElementById('linkRedes');
+
+    const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/calavera-panel-2026.webm";
+
+    arVideo.src = VIDEO_URL;
+    arVideo.crossOrigin = "anonymous";
+    arVideo.muted = false;
+    arVideo.loop = true;
+    arVideo.playsInline = true;
+    arVideo.preload = "auto";
+
+    let scanning = false;
+    let userStartedAr = false;
+    let lastTap = 0;
+    const DOUBLE_TAP_MS = 300;
+    let forceShowTimeout = null;
+    let controlsTimeout = null;
+    const CONTROLS_HIDE_MS = 3500;
+
+    arVideo.addEventListener('loadedmetadata', () => {
+      const w = arVideo.videoWidth;
+      const h = arVideo.videoHeight;
+      if (!w || !h) return;
+      const base = 1.2;
+      const ratio = w / h;
+      if (ratio >= 1) {
+        videoPlane.setAttribute('width', base);
+        videoPlane.setAttribute('height', (base / ratio).toFixed(4));
+      } else {
+        videoPlane.setAttribute('height', base);
+        videoPlane.setAttribute('width', (base * ratio).toFixed(4));
+      }
+    }, { once: true });
+
+    function setControlsHiddenWhilePlaying(hidden) {
+      const children = [...controls.children];
+      children.forEach(ch => {
+        if (hidden) ch.classList.add('hidden-while-playing');
+        else ch.classList.remove('hidden-while-playing');
+      });
+    }
+
+    function stopAndReleaseStream(videoEl){
+      try{
+        const s = videoEl && videoEl.srcObject;
+        if (s && s.getTracks) s.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} });
+      }catch(e){}
+      try{ if (videoEl) videoEl.srcObject = null; }catch(e){}
+    }
+
+    async function stopMindARCamera(){
+      try{
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        if (mindarSystem){
+          if (typeof mindarSystem.stop === 'function') await mindarSystem.stop();
+          const internalVideo = mindarSystem.video || mindarSystem.videoEl || mindarSystem._video;
+          if (internalVideo && internalVideo.srcObject){
+            try{ internalVideo.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
+            try{ internalVideo.srcObject = null; }catch(e){}
+          }
+        }
+      }catch(e){ console.warn('stopMindARCamera error', e); }
+      try{
+        document.querySelectorAll('video').forEach(v=>{
+          if (v && v.srcObject && v.srcObject.getTracks){
+            try{ v.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
+            try{ v.srcObject = null; }catch(e){}
+          }
+        });
+      }catch(e){}
+    }
+
+    function showControlsTemporarily() {
+      if (!scanning) return;
+      controls.classList.add('visible');
+      if (controlsTimeout) clearTimeout(controlsTimeout);
+      controlsTimeout = setTimeout(()=>controls.classList.remove('visible'), CONTROLS_HIDE_MS);
+    }
+
+    function forceShowControls(duration = 4000) {
+      if (forceShowTimeout) { clearTimeout(forceShowTimeout); forceShowTimeout = null; }
+      const children = [...controls.children];
+      children.forEach(ch => ch.classList.remove('hidden-while-playing'));
+      controls.classList.add('visible');
+      forceShowTimeout = setTimeout(() => {
+        if (!arVideo.paused && userStartedAr) {
+          setControlsHiddenWhilePlaying(true);
+          controls.classList.remove('visible');
+        } else {
+          controls.classList.add('visible');
+        }
+        forceShowTimeout = null;
+      }, duration);
+    }
+
+    function handleTapEvent(e) {
+      const now = Date.now();
+      if (now - lastTap <= DOUBLE_TAP_MS) {
+        e.preventDefault();
+        forceShowControls(4000);
+        lastTap = 0;
+      } else {
+        if (scanning) showControlsTemporarily();
+        lastTap = now;
+      }
+    }
+
+    targetEntity.addEventListener('targetFound', async () => {
+      if (!scanning) return;
+      videoPlane.setAttribute('visible','true');
+      label.textContent = 'Obra detectada. Doble tap para mostrar controles';
+      setControlsHiddenWhilePlaying(true);
+      controls.classList.remove('visible');
+      if (userStartedAr && arVideo.paused) {
+        try{ await arVideo.play().catch(()=>{}); }catch(e){}
+      }
+    });
+
+    targetEntity.addEventListener('targetLost', () => {
+      videoPlane.setAttribute('visible','false');
+      label.textContent = 'Escanea la obra';
+      controls.classList.remove('visible');
+      setControlsHiddenWhilePlaying(false);
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+    });
+
+    document.addEventListener('click', handleTapEvent, { passive: false });
+    document.addEventListener('touchstart', handleTapEvent, { passive: false });
+
+    playTargetBtn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      try {
+        if (arVideo.paused) {
+          await arVideo.play();
+          userStartedAr = true;
+          playTargetBtn.classList.add('active');
+          playTargetBtn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M6 19h4V5H6v14zm8-14v14h4V5h-4z\"/></svg>';
+          setControlsHiddenWhilePlaying(true);
+          controls.classList.remove('visible');
+        } else {
+          arVideo.pause();
+          playTargetBtn.classList.remove('active');
+          playTargetBtn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M6 4v16l12-8z\"/></svg>';
+          setControlsHiddenWhilePlaying(false);
+          controls.classList.add('visible');
+        }
+      } catch (e) { console.warn(e); }
+    });
+
+    homeBtn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      try{ await stopMindARCamera(); }catch(e){ console.warn(e); }
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      try{ arVideo.src = ''; }catch(e){}
+      stopAndReleaseStream(arVideo);
+      scanning = false;
+      userStartedAr = false;
+      playTargetBtn.classList.remove('active');
+      playTargetBtn.innerHTML = '<svg viewBox=\"0 0 24 24\"><path d=\"M6 4v16l12-8z\"/></svg>';
+      setControlsHiddenWhilePlaying(false);
+      controls.classList.remove('visible');
+      homeOverlay.style.display = 'flex';
+      label.textContent = 'Escaneo detenido';
+      setTimeout(()=>{ location.reload(); }, 250);
+    });
+
+    playFixedBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
+      window.open(VIDEO_URL, '_blank');
+      playFixedBtn.classList.add('active');
+      setTimeout(()=>playFixedBtn.classList.remove('active'), 1200);
+    });
+
+    startScanBtn.addEventListener('click', async () => {
+      homeOverlay.style.display = 'none';
+      scanning = true;
+      try {
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        const startAR = async () => {
+          try {
+            if (mindarSystem && typeof mindarSystem.start === 'function') {
+              await mindarSystem.start();
+            }
+          } catch (e) { console.warn(e); }
+          label.textContent = 'Apunta la cámara a la obra';
+          controls.classList.add('visible');
+          setControlsHiddenWhilePlaying(false);
+        };
+
+        if (sceneEl.hasLoaded) {
+          await startAR();
+        } else {
+          sceneEl.addEventListener('loaded', startAR, { once: true });
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    });
+
+    let attemptedAutoResume = false;
+    arVideo.addEventListener('pause', async () => {
+      if (scanning && userStartedAr && !attemptedAutoResume) {
+        attemptedAutoResume = true;
+        try { await arVideo.play().catch(()=>{}); } catch (e) {}
+        setTimeout(()=>attemptedAutoResume = false, 1500);
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      stopAndReleaseStream(arVideo);
+    });
+
+    function safeOpen(url) {
+      try {
+        const w = window.open(url, '_blank', 'noopener');
+        if (!w) window.location.href = url;
+      } catch (e) {
+        window.location.href = url;
+      }
+    }
+
+    linkDev.addEventListener('touchend', (e) => { e.preventDefault(); safeOpen(linkDev.href); });
+    linkRedes.addEventListener('touchend', (e) => { e.preventDefault(); safeOpen(linkRedes.href); });
+
+    homeOverlay.style.display = 'flex';
+    controls.classList.remove('visible');
+    setControlsHiddenWhilePlaying(false);
+  </script>
+
+</body>
+</html>
