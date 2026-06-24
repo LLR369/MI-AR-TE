@@ -1,557 +1,560 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-<title>MI-AR-TE - Video AR</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <title>MI-AR-TE - Video AR</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-<style>
-:root{
---bg:#000000;
---gold:#B0976D;
---white:#ffffff;
---glass:rgba(176,151,109,.12);
---glass-border:rgba(176,151,109,.45);
---shadow:0 12px 32px rgba(0,0,0,.45);
---radius-pill:999px;
---radius-card:28px;
-}
+  <style>
+    :root{
+      --bg:#000000;
+      --gold:#B0976D;
+      --white:#ffffff;
+      --glass:rgba(176,151,109,.12);
+      --glass-border:rgba(176,151,109,.45);
+      --shadow:0 12px 32px rgba(0,0,0,.45);
+      --radius-pill:999px;
+      --radius-card:28px;
+    }
 
-*{box-sizing:border-box}
-html,body{
-margin:0;
-height:100%;
-background:var(--bg);
-color:var(--white);
-font-family:'Heebo',sans-serif;
--webkit-tap-highlight-color:transparent;
-}
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      height:100%;
+      background:transparent;
+      color:var(--white);
+      font-family:'Heebo',sans-serif;
+      -webkit-tap-highlight-color:transparent;
+    }
 
-#label{
-position:fixed;
-left:50%;
-bottom:18px;
-transform:translateX(-50%);
-background:rgba(176,151,109,.16);
-border:1px solid rgba(176,151,109,.38);
-color:var(--white);
-padding:10px 16px;
-border-radius:var(--radius-pill);
-font-size:14px;
-z-index:9998;
-max-width:90vw;
-text-align:center;
-pointer-events:none;
-backdrop-filter:blur(10px);
-box-shadow:var(--shadow);
-}
+    #label{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(176,151,109,.16);
+      border:1px solid rgba(176,151,109,.38);
+      color:var(--white);
+      padding:10px 16px;
+      border-radius:var(--radius-pill);
+      font-size:14px;
+      z-index:9998;
+      max-width:90vw;
+      text-align:center;
+      pointer-events:none;
+      backdrop-filter:blur(10px);
+      box-shadow:var(--shadow);
+    }
 
-#controls{
-position:fixed;
-left:50%;
-bottom:92px;
-transform:translateX(-50%) translateY(6px);
-display:flex;
-gap:14px;
-align-items:center;
-z-index:10000;
-pointer-events:auto;
-transition:opacity .25s,transform .2s;
-opacity:0;
-visibility:hidden;
-}
-#controls.visible{
-opacity:1;
-visibility:visible;
-transform:translateX(-50%) translateY(0);
-}
+    #controls{
+      position:fixed;
+      left:50%;
+      bottom:92px;
+      transform:translateX(-50%) translateY(6px);
+      display:flex;
+      gap:14px;
+      align-items:center;
+      z-index:10000;
+      pointer-events:auto;
+      transition:opacity .25s,transform .2s;
+      opacity:0;
+      visibility:hidden;
+    }
+    #controls.visible{
+      opacity:1;
+      visibility:visible;
+      transform:translateX(-50%) translateY(0);
+    }
 
-.ctrl-btn{
-width:58px;
-height:58px;
-border-radius:50%;
-border:1px solid rgba(255,255,255,.12);
-background:var(--gold);
-color:var(--white);
-display:flex;
-align-items:center;
-justify-content:center;
-box-shadow:0 10px 24px rgba(176,151,109,.28);
-cursor:pointer;
-transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
-}
-.ctrl-btn:hover{filter:brightness(1.05)}
-.ctrl-btn:active{transform:scale(.97)}
-.ctrl-btn svg{width:22px;height:22px;fill:currentColor}
-.ctrl-btn.active{box-shadow:0 0 0 3px rgba(176,151,109,.22), 0 12px 28px rgba(176,151,109,.34)}
+    .ctrl-btn{
+      width:58px;
+      height:58px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.12);
+      background:var(--gold);
+      color:var(--white);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 10px 24px rgba(176,151,109,.28);
+      cursor:pointer;
+      transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    .ctrl-btn:hover{filter:brightness(1.05)}
+    .ctrl-btn:active{transform:scale(.97)}
+    .ctrl-btn svg{width:22px;height:22px;fill:currentColor}
+    .ctrl-btn.active{box-shadow:0 0 0 3px rgba(176,151,109,.22), 0 12px 28px rgba(176,151,109,.34)}
 
-.hidden-while-playing{
-opacity:0;
-pointer-events:none;
-transform:translateY(6px);
-transition:opacity .18s ease,transform .18s ease;
-}
+    .hidden-while-playing{
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(6px);
+      transition:opacity .18s ease,transform .18s ease;
+    }
 
-#homeOverlay{
-position:fixed;
-inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-background:radial-gradient(circle at top, rgba(176,151,109,.16), transparent 34%), #000000;
-color:var(--white);
-z-index:10003;
-padding:24px;
-}
+    #homeOverlay{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:radial-gradient(circle at top, rgba(176,151,109,.16), transparent 34%), #000000;
+      color:var(--white);
+      z-index:10003;
+      padding:24px;
+    }
 
-#homeCard{
-width:min(920px,94vw);
-max-height:90vh;
-overflow:auto;
-background:linear-gradient(180deg, rgba(176,151,109,.12), rgba(176,151,109,.05));
-border:1px solid var(--glass-border);
-color:var(--white);
-border-radius:var(--radius-card);
-padding:32px 24px;
-text-align:center;
-box-shadow:var(--shadow);
-backdrop-filter:blur(8px);
-}
+    #homeCard{
+      width:min(920px,94vw);
+      max-height:90vh;
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(176,151,109,.12), rgba(176,151,109,.05));
+      border:1px solid var(--glass-border);
+      color:var(--white);
+      border-radius:var(--radius-card);
+      padding:32px 24px;
+      text-align:center;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(8px);
+    }
 
-.profile-wrap{
-display:flex;
-justify-content:center;
-margin-bottom:18px;
-}
+    .profile-wrap{
+      display:flex;
+      justify-content:center;
+      margin-bottom:18px;
+    }
 
-.profile-avatar{
-width:170px;
-height:170px;
-border-radius:50%;
-padding:6px;
-border:3px solid var(--gold);
-background:rgba(176,151,109,.08);
-box-shadow:0 0 0 8px rgba(176,151,109,.08), 0 16px 36px rgba(0,0,0,.42);
-overflow:hidden;
-}
+    .profile-avatar{
+      width:170px;
+      height:170px;
+      border-radius:50%;
+      padding:6px;
+      border:3px solid var(--gold);
+      background:rgba(176,151,109,.08);
+      box-shadow:0 0 0 8px rgba(176,151,109,.08), 0 16px 36px rgba(0,0,0,.42);
+      overflow:hidden;
+    }
 
-.profile-avatar img{
-width:100%;
-height:100%;
-object-fit:cover;
-border-radius:50%;
-display:block;
-}
+    .profile-avatar img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      border-radius:50%;
+      display:block;
+    }
 
-#homeTitle{
-font-family:'Anton',sans-serif;
-font-size:clamp(2.4rem, 6vw, 4rem);
-letter-spacing:.04em;
-margin:0 0 10px;
-color:var(--gold);
-line-height:1;
-}
+    #homeTitle{
+      font-family:'Anton',sans-serif;
+      font-size:clamp(2.4rem, 6vw, 4rem);
+      letter-spacing:.04em;
+      margin:0 0 10px;
+      color:var(--gold);
+      line-height:1;
+    }
 
-#homeSubtitle,
-.home-note{
-font-family:'Heebo',sans-serif;
-color:var(--white);
-margin-inline:auto;
-max-width:700px;
-line-height:1.7;
-}
+    #homeSubtitle,
+    .home-note{
+      font-family:'Heebo',sans-serif;
+      color:var(--white);
+      margin-inline:auto;
+      max-width:700px;
+      line-height:1.7;
+    }
 
-#homeSubtitle{font-size:16px;margin-bottom:20px}
-.home-note{font-size:14px;opacity:.92;margin-top:6px}
+    #homeSubtitle{font-size:16px;margin-bottom:20px}
+    .home-note{font-size:14px;opacity:.92;margin-top:6px}
 
-.home-links{
-display:flex;
-gap:14px;
-justify-content:center;
-margin:22px 0 18px;
-flex-wrap:wrap;
-}
+    .home-links{
+      display:flex;
+      gap:14px;
+      justify-content:center;
+      margin:22px 0 18px;
+      flex-wrap:wrap;
+    }
 
-.home-link-btn,
-#startScanBtn{
-background:var(--gold);
-color:var(--white);
-padding:14px 18px;
-border-radius:16px;
-text-decoration:none;
-font-family:'Anton',sans-serif;
-letter-spacing:.04em;
-font-size:16px;
-display:inline-flex;
-align-items:center;
-justify-content:center;
-gap:10px;
-border:1px solid rgba(255,255,255,.14);
-box-shadow:0 10px 24px rgba(176,151,109,.22);
-transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
-}
+    .home-link-btn,
+    #startScanBtn{
+      background:var(--gold);
+      color:var(--white);
+      padding:14px 18px;
+      border-radius:16px;
+      text-decoration:none;
+      font-family:'Anton',sans-serif;
+      letter-spacing:.04em;
+      font-size:16px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:0 10px 24px rgba(176,151,109,.22);
+      transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
 
-.home-link-btn:hover,
-#startScanBtn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+    .home-link-btn:hover,
+    #startScanBtn:hover{filter:brightness(1.05);transform:translateY(-1px)}
 
-#startScanBtn{
-margin-top:20px;
-cursor:pointer;
-min-width:240px;
-}
+    #startScanBtn{
+      margin-top:20px;
+      cursor:pointer;
+      min-width:240px;
+    }
 
-.fa-solid,.fa-brands{color:var(--white)}
-a-scene{width:100%;height:100%}
+    .fa-solid,.fa-brands{color:var(--white)}
+    a-scene{width:100%;height:100%}
 
-@media (max-width:640px){
-#homeCard{padding:28px 18px 24px}
-.profile-avatar{width:138px;height:138px}
-.home-link-btn,#startScanBtn{width:100%}
-.home-links{gap:12px}
-.ctrl-btn{width:54px;height:54px}
-}
-</style>
+    @media (max-width:640px){
+      #homeCard{padding:28px 18px 24px}
+      .profile-avatar{width:138px;height:138px}
+      .home-link-btn,#startScanBtn{width:100%}
+      .home-links{gap:12px}
+      .ctrl-btn{width:54px;height:54px}
+    }
+  </style>
 </head>
 <body>
 
-<div id="label">Escanea la obra</div>
+  <div id="label">Escanea la obra</div>
 
-<div id="controls" aria-hidden="true">
-<button id="playTargetBtn" class="ctrl-btn" title="Reproducir anclado" aria-label="Reproducir anclado">
-<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>
-</button>
+  <div id="controls" aria-hidden="true">
+    <button id="playTargetBtn" class="ctrl-btn" title="Reproducir anclado" aria-label="Reproducir anclado">
+      <svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>
+    </button>
 
-<button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
-<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-</button>
+    <button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    </button>
 
-<button id="playFixedBtn" class="ctrl-btn" title="Abrir video fijo en nueva pestaña" aria-label="Abrir video fijo">
-<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-</button>
-</div>
+    <button id="playFixedBtn" class="ctrl-btn" title="Abrir video fijo en nueva pestaña" aria-label="Abrir video fijo">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
 
-<div id="homeOverlay" role="dialog" aria-modal="true">
-<div id="homeCard">
-<div class="profile-wrap">
-<div class="profile-avatar">
-<img src="https://drive.google.com/thumbnail?id=1tG5zDoiii4hYY1_26Tn9AXevN5ufU4Hu&sz=w1000" alt="Foto de perfil de LLR" width="170" height="170">
-</div>
-</div>
+  <div id="homeOverlay" role="dialog" aria-modal="true">
+    <div id="homeCard">
+      <div class="profile-wrap">
+        <div class="profile-avatar">
+          <img src="https://drive.google.com/thumbnail?id=1tG5zDoiii4hYY1_26Tn9AXevN5ufU4Hu&sz=w1000" alt="Foto de perfil de LLR" width="170" height="170">
+        </div>
+      </div>
 
-<h1 id="homeTitle">MI-AR-TE</h1>
-<p id="homeSubtitle">Un desarrollo de AR creado por Leonardo Lumbreras Rodríguez para las obras del mismo</p>
+      <h1 id="homeTitle">MI-AR-TE</h1>
+      <p id="homeSubtitle">Proyecto de realidad aumentada (AR) desarrollado por LLR, artista multidisciplinario mexicano, aplicado a su obra.</p>
 
-<div class="home-links">
-<a id="linkRedes" class="home-link-btn" href="https://llr369.github.io/LLR/" target="_blank" rel="noopener noreferrer">
-<i class="fa-solid fa-link"></i>
-<span>Redes del creador</span>
-</a>
-</div>
+      <div class="home-links">
+        <a id="linkRedes" class="home-link-btn" href="https://llr369.github.io/LLR/" target="_blank" rel="noopener noreferrer">
+          <i class="fa-solid fa-link"></i>
+          <span>Redes del creador</span>
+        </a>
+      </div>
 
-<p class="home-note">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
+      <p class="home-note">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
 
-<button id="startScanBtn">
-<i class="fa-solid fa-camera"></i>
-<span>Iniciar el escaneo</span>
-</button>
-</div>
-</div>
+      <button id="startScanBtn">
+        <i class="fa-solid fa-camera"></i>
+        <span>Iniciar el escaneo</span>
+      </button>
+    </div>
+  </div>
 
-<a-scene id="scene"
-mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
-color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
-background="transparent: true" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-<a-assets>
-<video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop></video>
-</a-assets>
+  <a-scene id="scene"
+    mindar-image="imageTargetSrc: ./assets/targets.mind; uiScanning: yes; uiLoading: yes; uiError: yes;"
+    color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
+    background="transparent: true" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-assets>
+      <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop></video>
+    </a-assets>
 
-<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<a-entity id="target" mindar-image-target="targetIndex: 0">
-<a-plane id="videoPlane" visible="false" position="0 0 0.01" rotation="0 0 0" width="1" height="1"
-material="shader: flat; src: #arVideo; side: double; transparent: true;"></a-plane>
-</a-entity>
-</a-scene>
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+      <a-plane id="videoPlane" visible="false" position="0 0 0.01" rotation="0 0 0" width="1" height="1"
+        material="shader: flat; src: #arVideo; side: double; transparent: true;"></a-plane>
+    </a-entity>
+  </a-scene>
 
-<script>
-const label = document.getElementById('label');
-const controls = document.getElementById('controls');
-const playTargetBtn = document.getElementById('playTargetBtn');
-const homeBtn = document.getElementById('homeBtn');
-const playFixedBtn = document.getElementById('playFixedBtn');
-const homeOverlay = document.getElementById('homeOverlay');
-const startScanBtn = document.getElementById('startScanBtn');
-const arVideo = document.getElementById('arVideo');
-const videoPlane = document.getElementById('videoPlane');
-const sceneEl = document.getElementById('scene');
-const targetEntity = document.querySelector('[mindar-image-target]');
-const linkRedes = document.getElementById('linkRedes');
+  <script>
+    const label = document.getElementById('label');
+    const controls = document.getElementById('controls');
+    const playTargetBtn = document.getElementById('playTargetBtn');
+    const homeBtn = document.getElementById('homeBtn');
+    const playFixedBtn = document.getElementById('playFixedBtn');
+    const homeOverlay = document.getElementById('homeOverlay');
+    const startScanBtn = document.getElementById('startScanBtn');
+    const arVideo = document.getElementById('arVideo');
+    const videoPlane = document.getElementById('videoPlane');
+    const sceneEl = document.getElementById('scene');
+    const targetEntity = document.querySelector('[mindar-image-target]');
+    const linkRedes = document.getElementById('linkRedes');
 
-const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm";
+    const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm";
 
-arVideo.src = VIDEO_URL;
-arVideo.crossOrigin = "anonymous";
-arVideo.muted = false;
-arVideo.loop = true;
-arVideo.playsInline = true;
-arVideo.preload = "auto";
+    arVideo.src = VIDEO_URL;
+    arVideo.crossOrigin = "anonymous";
+    arVideo.muted = false;
+    arVideo.loop = true;
+    arVideo.playsInline = true;
+    arVideo.preload = "auto";
 
-let scanning = false;
-let userStartedAr = false;
-let lastTap = 0;
-const DOUBLE_TAP_MS = 300;
-let forceShowTimeout = null;
-let controlsTimeout = null;
-const CONTROLS_HIDE_MS = 3500;
-let videoReady = false;
-let lastTargetBoxSize = null;
-let threeAvailable = !!window.THREE;
+    let scanning = false;
+    let userStartedAr = false;
+    let lastTap = 0;
+    const DOUBLE_TAP_MS = 300;
+    let forceShowTimeout = null;
+    let controlsTimeout = null;
+    const CONTROLS_HIDE_MS = 3500;
+    let videoReady = false;
+    let lastTargetBoxSize = null;
+    let threeAvailable = !!window.THREE;
 
-function setControlsHiddenWhilePlaying(hidden) {
-[...controls.children].forEach(ch => {
-if (hidden) ch.classList.add('hidden-while-playing');
-else ch.classList.remove('hidden-while-playing');
-});
-}
+    function setControlsHiddenWhilePlaying(hidden) {
+      [...controls.children].forEach(ch => {
+        if (hidden) ch.classList.add('hidden-while-playing');
+        else ch.classList.remove('hidden-while-playing');
+      });
+    }
 
-function stopAndReleaseStream(videoEl){
-try{
-const s = videoEl && videoEl.srcObject;
-if (s && s.getTracks) s.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} });
-}catch(e){}
-try{ if (videoEl) videoEl.srcObject = null; }catch(e){}
-}
+    function stopAndReleaseStream(videoEl){
+      try{
+        const s = videoEl && videoEl.srcObject;
+        if (s && s.getTracks) s.getTracks().forEach(t=>{ try{ t.stop(); }catch(e){} });
+      }catch(e){}
+      try{ if (videoEl) videoEl.srcObject = null; }catch(e){}
+    }
 
-async function stopMindARCamera(){
-try{
-const mindarSystem = sceneEl.systems['mindar-image'];
-if (mindarSystem){
-if (typeof mindarSystem.stop === 'function') await mindarSystem.stop();
-const internalVideo = mindarSystem.video || mindarSystem.videoEl || mindarSystem._video;
-if (internalVideo && internalVideo.srcObject){
-try{ internalVideo.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
-try{ internalVideo.srcObject = null; }catch(e){}
-}
-}
-}catch(e){ console.warn('stopMindARCamera error', e); }
-try{
-document.querySelectorAll('video').forEach(v=>{
-if (v && v.srcObject && v.srcObject.getTracks){
-try{ v.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
-try{ v.srcObject = null; }catch(e){}
-}
-});
-}catch(e){}
-}
+    async function stopMindARCamera(){
+      try{
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        if (mindarSystem){
+          if (typeof mindarSystem.stop === 'function') await mindarSystem.stop();
+          const internalVideo = mindarSystem.video || mindarSystem.videoEl || mindarSystem._video;
+          if (internalVideo && internalVideo.srcObject){
+            try{ internalVideo.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
+            try{ internalVideo.srcObject = null; }catch(e){}
+          }
+        }
+      }catch(e){ console.warn('stopMindARCamera error', e); }
+      try{
+        document.querySelectorAll('video').forEach(v=>{
+          if (v && v.srcObject && v.srcObject.getTracks){
+            try{ v.srcObject.getTracks().forEach(t=>t.stop()); }catch(e){}
+            try{ v.srcObject = null; }catch(e){}
+          }
+        });
+      }catch(e){}
+    }
 
-function showControlsTemporarily() {
-if (!scanning) return;
-controls.classList.add('visible');
-if (controlsTimeout) clearTimeout(controlsTimeout);
-controlsTimeout = setTimeout(()=>controls.classList.remove('visible'), CONTROLS_HIDE_MS);
-}
+    function showControlsTemporarily() {
+      if (!scanning) return;
+      controls.classList.add('visible');
+      if (controlsTimeout) clearTimeout(controlsTimeout);
+      controlsTimeout = setTimeout(()=>controls.classList.remove('visible'), CONTROLS_HIDE_MS);
+    }
 
-function forceShowControls(duration = 4000) {
-if (forceShowTimeout) {
-clearTimeout(forceShowTimeout);
-forceShowTimeout = null;
-}
-[...controls.children].forEach(ch => ch.classList.remove('hidden-while-playing'));
-controls.classList.add('visible');
-forceShowTimeout = setTimeout(() => {
-if (!arVideo.paused && userStartedAr) {
-setControlsHiddenWhilePlaying(true);
-controls.classList.remove('visible');
-} else {
-controls.classList.add('visible');
-}
-forceShowTimeout = null;
-}, duration);
-}
+    function forceShowControls(duration = 4000) {
+      if (forceShowTimeout) {
+        clearTimeout(forceShowTimeout);
+        forceShowTimeout = null;
+      }
+      [...controls.children].forEach(ch => ch.classList.remove('hidden-while-playing'));
+      controls.classList.add('visible');
+      forceShowTimeout = setTimeout(() => {
+        if (!arVideo.paused && userStartedAr) {
+          setControlsHiddenWhilePlaying(true);
+          controls.classList.remove('visible');
+        } else {
+          controls.classList.add('visible');
+        }
+        forceShowTimeout = null;
+      }, duration);
+    }
 
-function handleTapEvent(e) {
-const now = Date.now();
-if (now - lastTap <= DOUBLE_TAP_MS) {
-e.preventDefault();
-forceShowControls(4000);
-lastTap = 0;
-} else {
-if (scanning) showControlsTemporarily();
-lastTap = now;
-}
-}
+    function handleTapEvent(e) {
+      const now = Date.now();
+      if (now - lastTap <= DOUBLE_TAP_MS) {
+        e.preventDefault();
+        forceShowControls(4000);
+        lastTap = 0;
+      } else {
+        if (scanning) showControlsTemporarily();
+        lastTap = now;
+      }
+    }
 
-function updatePlaneSizeIfReady() {
-if (!videoReady || !lastTargetBoxSize) return;
-const targetWidth = lastTargetBoxSize.x || 1;
-const targetHeight = lastTargetBoxSize.y || 1;
-const vw = arVideo.videoWidth || 16;
-const vh = arVideo.videoHeight || 9;
-const videoAspect = vw / vh;
-const targetAspect = targetWidth / targetHeight;
-let planeWidth, planeHeight;
+    function updatePlaneSizeIfReady() {
+      if (!videoReady || !lastTargetBoxSize) return;
+      const targetWidth = lastTargetBoxSize.x || 1;
+      const targetHeight = lastTargetBoxSize.y || 1;
+      const vw = arVideo.videoWidth || 16;
+      const vh = arVideo.videoHeight || 9;
+      const videoAspect = vw / vh;
+      const targetAspect = targetWidth / targetHeight;
+      let planeWidth, planeHeight;
 
-if (videoAspect > targetAspect) {
-planeHeight = targetHeight;
-planeWidth = planeHeight * videoAspect;
-} else {
-planeWidth = targetWidth;
-planeHeight = planeWidth / videoAspect;
-}
+      if (videoAspect > targetAspect) {
+        planeHeight = targetHeight;
+        planeWidth = planeHeight * videoAspect;
+      } else {
+        planeWidth = targetWidth;
+        planeHeight = planeWidth / videoAspect;
+      }
 
-videoPlane.setAttribute('width', planeWidth);
-videoPlane.setAttribute('height', planeHeight);
-videoPlane.setAttribute('position', '0 0 0.01');
-videoPlane.setAttribute('visible', 'true');
-}
+      videoPlane.setAttribute('width', planeWidth);
+      videoPlane.setAttribute('height', planeHeight);
+      videoPlane.setAttribute('position', '0 0 0.01');
+      videoPlane.setAttribute('visible', 'true');
+    }
 
-arVideo.addEventListener('loadedmetadata', () => {
-videoReady = true;
-updatePlaneSizeIfReady();
-});
+    arVideo.addEventListener('loadedmetadata', () => {
+      videoReady = true;
+      updatePlaneSizeIfReady();
+    });
 
-function computeTargetBoxSize() {
-try {
-if (!threeAvailable) {
-lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
-return;
-}
-const obj = targetEntity.object3D;
-const box = new THREE.Box3().setFromObject(obj);
-const size = new THREE.Vector3();
-box.getSize(size);
-if (!size.x || !size.y) {
-lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
-} else {
-lastTargetBoxSize = { x: size.x, y: size.y, z: size.z };
-}
-} catch (e) {
-lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
-}
-}
+    function computeTargetBoxSize() {
+      try {
+        if (!threeAvailable) {
+          lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
+          return;
+        }
+        const obj = targetEntity.object3D;
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        if (!size.x || !size.y) {
+          lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
+        } else {
+          lastTargetBoxSize = { x: size.x, y: size.y, z: size.z };
+        }
+      } catch (e) {
+        lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
+      }
+    }
 
-targetEntity.addEventListener('targetFound', async () => {
-if (!scanning) return;
-computeTargetBoxSize();
-updatePlaneSizeIfReady();
-videoPlane.setAttribute('visible','true');
-label.textContent = 'Obra detectada. Doble tap para mostrar controles';
-setControlsHiddenWhilePlaying(true);
-controls.classList.remove('visible');
-if (userStartedAr && arVideo.paused) {
-try{ await arVideo.play().catch(()=>{}); }catch(e){}
-}
-});
+    targetEntity.addEventListener('targetFound', async () => {
+      if (!scanning) return;
+      computeTargetBoxSize();
+      updatePlaneSizeIfReady();
+      videoPlane.setAttribute('visible','true');
+      label.textContent = 'Obra detectada. Doble tap para mostrar controles';
+      setControlsHiddenWhilePlaying(true);
+      controls.classList.remove('visible');
+      if (userStartedAr && arVideo.paused) {
+        try{ await arVideo.play().catch(()=>{}); }catch(e){}
+      }
+    });
 
-targetEntity.addEventListener('targetLost', () => {
-videoPlane.setAttribute('visible','false');
-label.textContent = 'Escanea la obra';
-controls.classList.remove('visible');
-setControlsHiddenWhilePlaying(false);
-try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
-});
+    targetEntity.addEventListener('targetLost', () => {
+      videoPlane.setAttribute('visible','false');
+      label.textContent = 'Escanea la obra';
+      controls.classList.remove('visible');
+      setControlsHiddenWhilePlaying(false);
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+    });
 
-document.addEventListener('click', handleTapEvent, { passive: false });
-document.addEventListener('touchstart', handleTapEvent, { passive: false });
+    document.addEventListener('click', handleTapEvent, { passive: false });
+    document.addEventListener('touchstart', handleTapEvent, { passive: false });
 
-playTargetBtn.addEventListener('click', async (ev) => {
-ev.stopPropagation();
-try {
-if (arVideo.paused) {
-await arVideo.play();
-userStartedAr = true;
-playTargetBtn.classList.add('active');
-playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-setControlsHiddenWhilePlaying(true);
-controls.classList.remove('visible');
-} else {
-arVideo.pause();
-playTargetBtn.classList.remove('active');
-playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
-setControlsHiddenWhilePlaying(false);
-controls.classList.add('visible');
-}
-} catch (e) { console.warn(e); }
-});
+    playTargetBtn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      try {
+        if (arVideo.paused) {
+          await arVideo.play();
+          userStartedAr = true;
+          playTargetBtn.classList.add('active');
+          playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+          setControlsHiddenWhilePlaying(true);
+          controls.classList.remove('visible');
+        } else {
+          arVideo.pause();
+          playTargetBtn.classList.remove('active');
+          playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
+          setControlsHiddenWhilePlaying(false);
+          controls.classList.add('visible');
+        }
+      } catch (e) { console.warn(e); }
+    });
 
-homeBtn.addEventListener('click', async (ev) => {
-ev.stopPropagation();
-try{ await stopMindARCamera(); }catch(e){ console.warn(e); }
-try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
-try{ arVideo.src = VIDEO_URL; }catch(e){}
-stopAndReleaseStream(arVideo);
-scanning = false;
-userStartedAr = false;
-playTargetBtn.classList.remove('active');
-playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
-setControlsHiddenWhilePlaying(false);
-controls.classList.remove('visible');
-homeOverlay.style.display = 'flex';
-label.textContent = 'Escaneo detenido';
-setTimeout(()=>{ location.reload(); }, 250);
-});
+    homeBtn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      try{ await stopMindARCamera(); }catch(e){ console.warn(e); }
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      try{ arVideo.src = VIDEO_URL; }catch(e){}
+      stopAndReleaseStream(arVideo);
+      scanning = false;
+      userStartedAr = false;
+      playTargetBtn.classList.remove('active');
+      playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
+      setControlsHiddenWhilePlaying(false);
+      controls.classList.remove('visible');
+      homeOverlay.style.display = 'flex';
+      document.body.style.background = '#000000';
+      label.textContent = 'Escaneo detenido';
+      setTimeout(()=>{ location.reload(); }, 250);
+    });
 
-playFixedBtn.addEventListener('click', (ev) => {
-ev.stopPropagation();
-try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
-window.open(VIDEO_URL, '_blank');
-playFixedBtn.classList.add('active');
-setTimeout(()=>playFixedBtn.classList.remove('active'), 1200);
-});
+    playFixedBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
+      window.open(VIDEO_URL, '_blank');
+      playFixedBtn.classList.add('active');
+      setTimeout(()=>playFixedBtn.classList.remove('active'), 1200);
+    });
 
-startScanBtn.addEventListener('click', async () => {
-homeOverlay.style.display = 'none';
-scanning = true;
-try {
-const mindarSystem = sceneEl.systems['mindar-image'];
-if (mindarSystem && typeof mindarSystem.start === 'function') {
-await mindarSystem.start();
-}
-} catch (e) { console.warn(e); }
-label.textContent = 'Apunta la cámara a la obra';
-controls.classList.add('visible');
-setControlsHiddenWhilePlaying(false);
-});
+    startScanBtn.addEventListener('click', async () => {
+      homeOverlay.style.display = 'none';
+      document.body.style.background = 'transparent';
+      scanning = true;
+      try {
+        const mindarSystem = sceneEl.systems['mindar-image'];
+        if (mindarSystem && typeof mindarSystem.start === 'function') {
+          await mindarSystem.start();
+        }
+      } catch (e) { console.warn(e); }
+      label.textContent = 'Apunta la cámara a la obra';
+      controls.classList.add('visible');
+      setControlsHiddenWhilePlaying(false);
+    });
 
-let attemptedAutoResume = false;
-arVideo.addEventListener('pause', async () => {
-if (scanning && userStartedAr && !attemptedAutoResume) {
-attemptedAutoResume = true;
-try { await arVideo.play().catch(()=>{}); } catch (e) {}
-setTimeout(()=>attemptedAutoResume = false, 1500);
-}
-});
+    let attemptedAutoResume = false;
+    arVideo.addEventListener('pause', async () => {
+      if (scanning && userStartedAr && !attemptedAutoResume) {
+        attemptedAutoResume = true;
+        try { await arVideo.play().catch(()=>{}); } catch (e) {}
+        setTimeout(()=>attemptedAutoResume = false, 1500);
+      }
+    });
 
-window.addEventListener('pagehide', () => {
-try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
-stopAndReleaseStream(arVideo);
-});
+    window.addEventListener('pagehide', () => {
+      try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
+      stopAndReleaseStream(arVideo);
+    });
 
-function safeOpen(url) {
-try {
-const w = window.open(url, '_blank', 'noopener');
-if (!w) window.location.href = url;
-} catch (e) {
-window.location.href = url;
-}
-}
+    function safeOpen(url) {
+      try {
+        const w = window.open(url, '_blank', 'noopener');
+        if (!w) window.location.href = url;
+      } catch (e) {
+        window.location.href = url;
+      }
+    }
 
-linkRedes.addEventListener('touchend', (e) => {
-e.preventDefault();
-safeOpen(linkRedes.href);
-});
+    linkRedes.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      safeOpen(linkRedes.href);
+    });
 
-homeOverlay.style.display = 'flex';
-controls.classList.remove('visible');
-setControlsHiddenWhilePlaying(false);
-</script>
+    homeOverlay.style.display = 'flex';
+    document.body.style.background = '#000000';
+    controls.classList.remove('visible');
+    setControlsHiddenWhilePlaying(false);
+  </script>
 
 </body>
 </html>
