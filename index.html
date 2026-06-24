@@ -5,82 +5,257 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
   <title>MI-AR-TE - Video AR</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    :root{
-      --btn-inactive-bg:#000000;
-      --btn-active-bg:#B0976D;
-      --btn-icon:#ffffff;
-      --label-bg:rgba(0,0,0,.72);
+    /* Visual theme provided by user, adapted to the AR UI */
+    :root {
+      --bg: #000;
+      --accent: #b0976d;
+      --border: rgba(176,151,109,.28);
+      --radius: 22px;
+
+      --controls-bg: rgba(0,0,0,.36);
+      --controls-btn-bg: #0b0b0b;
+      --controls-btn-active: var(--accent);
+      --label-bg: rgba(255,255,255,.06);
     }
-    html,body{margin:0;height:100%;background:transparent;font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
-    /* Mensaje inferior */
-    #label{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--label-bg);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;z-index:9998;max-width:90vw;text-align:center;pointer-events:none}
 
-    /* Controles en fila, justo encima del label */
-    #controls{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;z-index:10000;pointer-events:auto;transition:opacity .25s,transform .2s;opacity:0;visibility:hidden;transform-origin:center;transform:translateX(-50%) translateY(6px)}
-    #controls.visible{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+    /* Page baseline (applies to overlay card) */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: none; }
+    body {
+      min-height: 100dvh;
+      background: var(--bg);
+      color: #fff;
+      font-family: 'Heebo', sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
 
-    .ctrl-btn{width:52px;height:52px;border-radius:999px;border:0;background:var(--btn-inactive-bg);color:var(--btn-icon);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer}
-    .ctrl-btn:active{transform:scale(.98)}
-    .ctrl-btn svg{width:22px;height:22px;fill:currentColor}
-    .ctrl-btn.active{background:var(--btn-active-bg);color:var(--btn-icon)}
+    /* Home overlay styled as card centered */
+    #homeOverlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.72));
+      z-index: 10003;
+      padding: clamp(18px, 4vw, 36px);
+    }
+    .card {
+      width: min(920px, 94vw);
+      max-width: 640px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border: 1px solid var(--border);
+      border-radius: clamp(18px, 4vw, 28px);
+      padding: clamp(20px, 4vw, 36px);
+      box-shadow: 0 20px 50px rgba(0,0,0,.55);
+      text-align: center;
+      color: rgba(255,255,255,.94);
+    }
 
-    /* Ocultado visual para controles (no elimina del DOM) */
-    .hidden-while-playing{opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease}
+    /* Profile / logo */
+    .profile-wrap { display:flex; justify-content:center; margin-bottom: clamp(12px, 3vw, 20px); }
+    .profile-image {
+      width: clamp(96px, 20vw, 140px);
+      height: clamp(96px, 20vw, 140px);
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 3px solid var(--accent);
+      box-shadow: 0 0 0 8px rgba(176,151,109,.08), 0 8px 30px rgba(0,0,0,.5);
+      display:block;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    }
+    .profile-note {
+      margin-top: 10px;
+      font-size: .82rem;
+      color: rgba(255,255,255,.72);
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
 
-    /* Home overlay (pantalla inicial) */
-    #homeOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#666666;color:#fff;z-index:10003;padding:24px;box-sizing:border-box}
-    #homeCard{width:min(920px,94vw);max-height:90vh;overflow:auto;background:transparent;color:#fff;border-radius:12px;padding:28px;box-sizing:border-box;text-align:center}
-    #homeTitle{font-family:'Anton',sans-serif;font-size:40px;margin:0 0 8px;color:#fff}
-    #homeSubtitle{font-size:16px;margin:0 0 18px;color:#e6e6e6}
-    .home-links{display:flex;gap:12px;justify-content:center;margin:14px 0 22px;flex-wrap:wrap}
-    .home-link-btn{background:#000;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
-    .home-link-btn:hover{background:#B0976D;color:#fff}
-    #startScanBtn{display:inline-block;margin-top:18px;background:#B0976D;color:#fff;padding:14px 20px;border-radius:12px;font-weight:800;font-size:16px;border:0;cursor:pointer}
+    /* Title and tagline */
+    h1 {
+      font-family: 'Anton', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-size: clamp(2rem, 6.5vw, 3.2rem);
+      line-height: 1;
+      margin: 10px 0 6px;
+      color: var(--accent);
+    }
+    .tagline {
+      font-size: clamp(.9rem, 2.2vw, 1rem);
+      color: rgba(255,255,255,.78);
+      line-height: 1.6;
+      margin-bottom: clamp(14px, 3.5vw, 22px);
+      max-width: 44ch;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
-    a-scene{width:100%;height:100%}
+    /* Links area */
+    .home-links { display:flex; gap:12px; justify-content:center; margin: 14px 0 18px; flex-wrap:wrap; }
+    .home-link-btn {
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 800;
+      font-family: 'Anton', sans-serif;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: 0 8px 22px rgba(176,151,109,.18);
+      transition: transform .18s ease, background .18s ease, color .18s ease;
+    }
+    .home-link-btn:hover, .home-link-btn:focus {
+      background: #0f0f0f;
+      color: var(--accent);
+      transform: translateY(-3px);
+      outline: none;
+    }
+
+    /* Start button */
+    #startScanBtn {
+      display:inline-block;
+      margin-top: 12px;
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-family: 'Anton', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background .18s ease, color .18s ease, transform .18s ease;
+    }
+    #startScanBtn:hover { background: var(--accent); color: #000; transform: translateY(-3px); }
+
+    /* Small footer */
+    .home-footer { margin-top: 12px; color: rgba(255,255,255,.36); font-size: .86rem; }
+
+    /* AR controls (kept functional but restyled to match theme) */
+    #label {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: var(--label-bg);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      z-index: 9998;
+      max-width: 90vw;
+      text-align: center;
+      pointer-events: none;
+      border: 1px solid rgba(255,255,255,.03);
+    }
+
+    #controls {
+      position: fixed;
+      left: 50%;
+      bottom: 90px;
+      transform: translateX(-50%);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      z-index:10000;
+      pointer-events:auto;
+      transition: opacity .25s, transform .2s;
+      opacity:0;
+      visibility:hidden;
+      transform-origin:center;
+      transform: translateX(-50%) translateY(6px);
+      background: transparent;
+    }
+    #controls.visible { opacity:1; visibility:visible; transform: translateX(-50%) translateY(0); }
+
+    .ctrl-btn {
+      width:52px;
+      height:52px;
+      border-radius:999px;
+      border:0;
+      background: var(--controls-btn-bg);
+      color: var(--btn-icon, #fff);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.6);
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+    }
+    .ctrl-btn:active { transform: scale(.98); }
+    .ctrl-btn svg { width:22px; height:22px; fill: currentColor; }
+    .ctrl-btn.active { background: var(--controls-btn-active); color: #000; box-shadow: 0 18px 36px rgba(176,151,109,.18); }
+
+    .hidden-while-playing { opacity:0; pointer-events:none; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease; }
+
+    /* Responsive tweaks */
+    @media (max-width:420px) {
+      .card { padding: 18px; }
+      .profile-image { width: 96px; height: 96px; }
+      .home-link-btn { padding: 10px 12px; font-size: .9rem; }
+      #controls { bottom: 80px; }
+    }
   </style>
 </head>
 <body>
 
   <div id="label">Escanea la obra</div>
 
-  <!-- Controles: (1) Play target, (2) Home (centro), (3) Play fijo (abre nueva pestaña) -->
+  <!-- Controls -->
   <div id="controls" aria-hidden="true">
-    <!-- 1) Play del video anclado al target -->
     <button id="playTargetBtn" class="ctrl-btn" title="Reproducir anclado" aria-label="Reproducir anclado">
       <svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>
     </button>
 
-    <!-- 2) Home (centro) - actúa como STOP / reinicio -->
     <button id="homeBtn" class="ctrl-btn" title="Inicio" aria-label="Inicio">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
     </button>
 
-    <!-- 3) Play fijo: abre nueva pestaña con el video -->
     <button id="playFixedBtn" class="ctrl-btn" title="Abrir video fijo en nueva pestaña" aria-label="Abrir video fijo">
       <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
     </button>
   </div>
 
-  <!-- Home overlay (pantalla inicial con info y links) -->
+  <!-- Home overlay (card visual) -->
   <div id="homeOverlay" role="dialog" aria-modal="true">
-    <div id="homeCard">
-      <h1 id="homeTitle">MI-AR-TE</h1>
-      <p id="homeSubtitle">Un desarrollo de AR creado por Leonardo Lumbreras Rodríguez para las obras del mismo</p>
-
-      <div class="home-links">
-        <a id="linkDev" class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener noreferrer">Desarrolladora</a>
-        <a id="linkRedes" class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener noreferrer">Redes del creador</a>
+    <div class="card" role="document" aria-label="Pantalla de inicio">
+      <div class="profile-wrap">
+        <!-- Reemplaza el src por la URL de tu logo/perfil -->
+        <img class="profile-image" src="REEMPLAZA_AQUI_EL_URL_O_RUTA_DE_TU_IMAGEN" alt="Logo / Perfil" width="140" height="140" loading="eager" />
       </div>
 
-      <p style="font-size:13px;color:#ddd;margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
+      <div class="profile-note">Perfil oficial — LLR</div>
 
-      <button id="startScanBtn">Iniciar el escaneo</button>
+      <h1>LLR</h1>
+      <p class="tagline">Artista multidisciplinario mexicano que fusiona arte, música y tecnología en experiencias inmersivas.</p>
+
+      <div class="home-links" aria-hidden="false">
+        <a id="linkDev" class="home-link-btn" href="https://triapestudio.com/" target="_blank" rel="noopener noreferrer">
+          <span>Desarrolladora</span>
+        </a>
+        <a id="linkRedes" class="home-link-btn" href="https://llr-musica.com/artists/llr/" target="_blank" rel="noopener noreferrer">
+          <span>Redes del creador</span>
+        </a>
+      </div>
+
+      <p style="font-size:13px;color:rgba(255,255,255,.72);margin-top:6px;">Toca iniciar el escaneo para activar la cámara y comenzar la experiencia AR.</p>
+
+      <button id="startScanBtn" aria-label="Iniciar escaneo">Iniciar el escaneo</button>
+
+      <div class="home-footer">MI-AR-TE · Experiencia AR</div>
     </div>
   </div>
 
@@ -90,14 +265,12 @@
     color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
     background="transparent: true" embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     <a-assets>
-      <!-- Video textura AR: audio siempre activo -->
       <video id="arVideo" crossorigin="anonymous" playsinline webkit-playsinline preload="auto" loop></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <!-- Plane inicial con tamaño 1x1; se ajustará dinámicamente al target -->
       <a-plane id="videoPlane" visible="false" position="0 0 0.01" rotation="0 0 0" width="1" height="1"
         material="shader: flat; src: #arVideo; side: double; transparent: true;"></a-plane>
     </a-entity>
@@ -119,13 +292,13 @@
     const linkDev = document.getElementById('linkDev');
     const linkRedes = document.getElementById('linkRedes');
 
-    // Video URL
-    const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/la-mona-llr-2026a.webm";
+    // Video URL (mantén tu URL)
+    const VIDEO_URL = "https://pub-27b9b10f6df84644a65bb3897f763d4c.r2.dev/Las-cronicas-de-un-zoo-logico-2026-leonardo-lumbreras-rodriguez.mp4";
 
     // Initialize AR video (audio always active)
     arVideo.src = VIDEO_URL;
     arVideo.crossOrigin = "anonymous";
-    arVideo.muted = false; // audio always on
+    arVideo.muted = false;
     arVideo.loop = true;
     arVideo.playsInline = true;
     arVideo.preload = "auto";
@@ -141,7 +314,7 @@
 
     // Flags/data for dynamic sizing
     let videoReady = false;
-    let lastTargetBoxSize = null; // {x,y,z}
+    let lastTargetBoxSize = null;
     let threeAvailable = !!window.THREE;
 
     // Utility: hide/show all control buttons together (including home)
@@ -174,7 +347,6 @@
           }
         }
       }catch(e){ console.warn('stopMindARCamera error', e); }
-      // extra safety: stop any MediaStream tracks attached to any video elements on page
       try{
         document.querySelectorAll('video').forEach(v=>{
           if (v && v.srcObject && v.srcObject.getTracks){
@@ -193,15 +365,11 @@
       controlsTimeout = setTimeout(()=>controls.classList.remove('visible'), CONTROLS_HIDE_MS);
     }
 
-    // Force show controls (used by double-tap) — shows controls even if hidden by playing state
     function forceShowControls(duration = 4000) {
       if (forceShowTimeout) { clearTimeout(forceShowTimeout); forceShowTimeout = null; }
-      // Remove hidden class from children so they appear
       const children = [...controls.children];
       children.forEach(ch => ch.classList.remove('hidden-while-playing'));
-      // Make controls visible
       controls.classList.add('visible');
-      // After duration, reapply hidden state if video is playing
       forceShowTimeout = setTimeout(() => {
         if (!arVideo.paused && userStartedAr) {
           setControlsHiddenWhilePlaying(true);
@@ -213,29 +381,24 @@
       }, duration);
     }
 
-    // Double-tap handler (works for click and touchstart)
     function handleTapEvent(e) {
       const now = Date.now();
       if (now - lastTap <= DOUBLE_TAP_MS) {
-        // double tap detected
         e.preventDefault();
         forceShowControls(4000);
         lastTap = 0;
       } else {
-        // single tap: show controls normally (if scanning)
         if (scanning) showControlsTemporarily();
         lastTap = now;
       }
     }
 
-    // Compute and apply plane size so the video covers the target exactly (cover behavior)
+    // Dynamic plane sizing: cover target while preserving video aspect
     function updatePlaneSizeIfReady() {
       if (!videoReady || !lastTargetBoxSize) return;
-      // target size in world units
       const targetWidth = lastTargetBoxSize.x || 1;
       const targetHeight = lastTargetBoxSize.y || 1;
 
-      // video aspect
       const vw = arVideo.videoWidth || 16;
       const vh = arVideo.videoHeight || 9;
       const videoAspect = vw / vh;
@@ -243,47 +406,35 @@
 
       let planeWidth, planeHeight;
 
-      // Cover logic: ensure plane covers entire target (may overflow one axis)
       if (videoAspect > targetAspect) {
-        // video relatively wider -> match target height, expand width
         planeHeight = targetHeight;
         planeWidth = planeHeight * videoAspect;
       } else {
-        // video relatively taller -> match target width, expand height
         planeWidth = targetWidth;
         planeHeight = planeWidth / videoAspect;
       }
 
-      // Apply to plane: set width/height attributes and center it on target
       videoPlane.setAttribute('width', planeWidth);
       videoPlane.setAttribute('height', planeHeight);
-
-      // Ensure plane is centered on target: position x,y = target center (0,0) for mindar target
-      // Slightly offset in z to avoid z-fighting
       videoPlane.setAttribute('position', `0 0 0.01`);
       videoPlane.setAttribute('visible', 'true');
     }
 
-    // When video metadata loads, mark ready and attempt sizing
     arVideo.addEventListener('loadedmetadata', () => {
       videoReady = true;
       updatePlaneSizeIfReady();
     });
 
-    // Use THREE to compute bounding box of the target entity when found
     function computeTargetBoxSize() {
       try {
         if (!threeAvailable) {
-          // THREE should be available via A-Frame; fallback to default 1x1
           lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
           return;
         }
         const obj = targetEntity.object3D;
-        // compute bounding box in world space
         const box = new THREE.Box3().setFromObject(obj);
         const size = new THREE.Vector3();
         box.getSize(size);
-        // If size is zero (sometimes before scene fully initialized), fallback to 1x1
         if (!size.x || !size.y) {
           lastTargetBoxSize = { x: 1, y: 1, z: 0.01 };
         } else {
@@ -297,14 +448,11 @@
     // MindAR events
     targetEntity.addEventListener('targetFound', async () => {
       if (!scanning) return;
-      // compute target size
       computeTargetBoxSize();
-      // update plane size to cover target
       updatePlaneSizeIfReady();
 
       videoPlane.setAttribute('visible','true');
       label.textContent = 'Obra detectada. Doble tap para mostrar controles';
-      // hide controls visually while playing
       setControlsHiddenWhilePlaying(true);
       controls.classList.remove('visible');
       if (userStartedAr && arVideo.paused) {
@@ -316,16 +464,14 @@
       videoPlane.setAttribute('visible','false');
       label.textContent = 'Escanea la obra';
       controls.classList.remove('visible');
-      // restore controls when target lost
       setControlsHiddenWhilePlaying(false);
       try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
     });
 
-    // Attach tap listeners for single/double tap behavior
     document.addEventListener('click', handleTapEvent, { passive: false });
     document.addEventListener('touchstart', handleTapEvent, { passive: false });
 
-    // 1) Play target (anclado) - audio always on
+    // Play target
     playTargetBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       try {
@@ -346,31 +492,25 @@
       } catch (e) { console.warn(e); }
     });
 
-    // 2) Home: STOP total, reinicia la app y vuelve a inicio
+    // Home (stop + reset)
     homeBtn.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      // Stop MindAR camera and any streams
       try{ await stopMindARCamera(); }catch(e){ console.warn(e); }
-      // Pause and clear AR video
       try{ if (!arVideo.paused) arVideo.pause(); }catch(e){}
-      try{ arVideo.src = VIDEO_URL; }catch(e){} // keep source but reset playback
+      try{ arVideo.src = VIDEO_URL; }catch(e){}
       stopAndReleaseStream(arVideo);
-      // Reset UI and flags
       scanning = false;
       userStartedAr = false;
       playTargetBtn.classList.remove('active');
       playTargetBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 4v16l12-8z"/></svg>';
-      // Restore controls visible
       setControlsHiddenWhilePlaying(false);
       controls.classList.remove('visible');
-      // Show home overlay (inicio) and ensure nothing runs until Start Scan
       homeOverlay.style.display = 'flex';
       label.textContent = 'Escaneo detenido';
-      // Reload page to ensure a full clean restart (ensures camera indicator disappears)
       setTimeout(()=>{ location.reload(); }, 250);
     });
 
-    // 3) Play fijo: abre nueva pestaña con el video fijo
+    // Play fixed (open video in new tab)
     playFixedBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
       try { if (!arVideo.paused) arVideo.pause(); } catch(e){}
@@ -379,7 +519,7 @@
       setTimeout(()=>playFixedBtn.classList.remove('active'), 1200);
     });
 
-    // Start scan: inicia MindAR y oculta home overlay; nada debe ejecutarse antes de esto
+    // Start scan
     startScanBtn.addEventListener('click', async () => {
       homeOverlay.style.display = 'none';
       scanning = true;
@@ -390,7 +530,6 @@
         }
       } catch (e) { console.warn(e); }
       label.textContent = 'Apunta la cámara a la obra';
-      // ensure controls are present in DOM (they will hide visually when playing)
       controls.classList.add('visible');
       setControlsHiddenWhilePlaying(false);
     });
@@ -415,19 +554,15 @@
     function safeOpen(url) {
       try {
         const w = window.open(url, '_blank', 'noopener');
-        if (!w) {
-          // popup blocked — navigate in same tab as fallback
-          window.location.href = url;
-        }
+        if (!w) window.location.href = url;
       } catch (e) {
         window.location.href = url;
       }
     }
-    // touch fallback for some mobile browsers
     linkDev.addEventListener('touchend', (e) => { e.preventDefault(); safeOpen(linkDev.href); });
     linkRedes.addEventListener('touchend', (e) => { e.preventDefault(); safeOpen(linkRedes.href); });
 
-    // Start with home overlay visible and controls hidden; nothing runs until Start Scan
+    // Start state
     homeOverlay.style.display = 'flex';
     controls.classList.remove('visible');
     setControlsHiddenWhilePlaying(false);
@@ -435,3 +570,4 @@
 
 </body>
 </html>
+
